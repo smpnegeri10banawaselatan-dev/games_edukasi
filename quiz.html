@@ -14,7 +14,7 @@
 <button id="submitQuiz" class="bg-green-600 text-white px-4 py-2 rounded mt-2">Submit</button>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMu-EqAQekJXP2OSGy4ThkVeTAXkfcdjxh3_xfXhLb56SXSi3EqHr0ESA7RKm6p7NV/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwckAXJVIek1UpYgBroZhLVbXBcXeMpxf8d54VfGUSSDx6G-ygbFpQVtRXMvqBFTIbS/exec";
 let quizData=[], score=0;
 async function loadQuiz(){
   const res = await axios.post(SCRIPT_URL,{action:'getQuizItems'});
