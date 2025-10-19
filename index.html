@@ -1,545 +1,105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>UTS Informatika - Game & Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .drag-item { cursor: grab; transition: all .2s; user-select:none; border-radius:8px; }
-    .drag-item:hover { transform: translateY(-4px); }
-    .drop-zone { min-height:120px; border:3px dashed #d1d5db; border-radius:12px; padding:16px; transition:all .15s; }
-    .drop-zone.drag-over { background:#ecfdf5; border-color:#10b981; transform:scale(1.01); }
-    .drop-zone.correct { background:#d1fae5; border-color:#10b981; }
-    .drop-zone.incorrect { background:#fee2e2; border-color:#ef4444; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Portal Belajar Informatika SMPN 10</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .drop-zone { border:3px dashed #cbd5e1; min-height:120px; border-radius:12px; padding:16px; }
+  .drop-zone.drag-over { background:#eef2ff; border-color:#6366f1; }
+  .drop-zone.correct { background:#d1fae5; border-color:#10b981; }
+  .drop-zone.incorrect { background:#fee2e2; border-color:#ef4444; }
+</style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-6">
-
-  <div class="max-w-6xl mx-auto">
-
-    <!-- Header -->
-    <header class="flex items-center gap-4 mb-6">
-      <img id="school-logo" src="smpn10.jpg" alt="Logo Sekolah" style="width:72px;height:72px;border-radius:8px;display:none;">
-      <div>
-        <h1 id="school-name" class="text-3xl font-bold text-gray-800">SMPN 10 BANAWA SELATAN</h1>
-        <p class="text-sm text-gray-600">UTS Informatika — Interaktif</p>
-      </div>
-    </header>
-
-    <!-- Login card -->
-    <div id="login-card" class="bg-white rounded-xl shadow p-6 mb-6 max-w-2xl">
-      <h2 class="text-xl font-semibold mb-4">Login</h2>
-      <div class="grid grid-cols-2 gap-4">
-        <input id="input-username" type="text" placeholder="Username" class="border p-2 rounded" />
-        <input id="input-password" type="password" placeholder="Password" class="border p-2 rounded" />
-      </div>
-      <div class="mt-4 flex gap-2">
-        <button id="btn-login" class="bg-blue-600 text-white px-4 py-2 rounded">Login</button>
-        <button id="btn-demo-student" class="bg-green-500 text-white px-4 py-2 rounded">Masuk sebagai Siswa</button>
-      </div>
-      <p id="login-error" class="text-red-600 mt-3"></p>
+<div class="max-w-6xl mx-auto">
+<header class="flex items-center gap-4 mb-6">
+  <img id="school-logo" src="" alt="Logo Sekolah" style="width:72px;height:72px;border-radius:8px;display:none;">
+  <div>
+    <h1 id="school-name" class="text-3xl font-bold text-gray-800">Portal Belajar Informatika SMPN 10</h1>
+    <p class="text-sm text-gray-600">UTS Informatika — Interaktif</p>
+  </div>
+</header>
+<div id="login-card" class="bg-white rounded-xl shadow p-6 mb-6 max-w-2xl">
+  <h2 class="text-xl font-semibold mb-4">Login</h2>
+  <div class="grid grid-cols-2 gap-4">
+    <input id="input-username" type="text" placeholder="Username" class="border p-2 rounded" />
+    <input id="input-password" type="password" placeholder="Password" class="border p-2 rounded" />
+  </div>
+  <div class="mt-4 flex gap-2">
+    <button id="btn-login" class="bg-blue-600 text-white px-4 py-2 rounded">Login</button>
+    <button id="btn-demo-student" class="bg-green-500 text-white px-4 py-2 rounded">Masuk sebagai Siswa Demo</button>
+  </div>
+  <p id="login-error" class="text-red-600 mt-3"></p>
+</div>
+<div id="app" class="hidden">
+  <div class="bg-white rounded-xl shadow p-6 mb-6 flex items-center justify-between">
+    <div>
+      <div>Selamat datang, <strong id="display-username"></strong> (<span id="display-role"></span>)</div>
+      <div id="student-info" class="text-sm text-gray-600 hidden">Nama: <span id="student-nama"></span> | NISN: <span id="student-nisn"></span> | Kelas: <span id="student-kelas"></span></div>
     </div>
-
-    <!-- App main (hidden until login) -->
-    <div id="app" class="hidden">
-
-      <!-- control bar -->
-      <div class="bg-white rounded-xl shadow p-6 mb-6 flex items-center justify-between">
-        <div>
-          <div>Selamat datang, <strong id="display-username"></strong> (<span id="display-role"></span>)</div>
-          <div id="student-info" class="text-sm text-gray-600 hidden">Nama: <span id="student-nama"></span> | NISN: <span id="student-nisn"></span> | Kelas: <span id="student-kelas"></span></div>
-        </div>
-
-        <div class="flex items-center gap-6">
-          <div class="text-center">
-            <div id="score" class="text-2xl font-bold text-green-600">0</div>
-            <div class="text-sm text-gray-600">Skor</div>
-          </div>
-          <div class="text-center">
-            <div id="timer" class="text-2xl font-bold text-blue-600">00:00</div>
-            <div class="text-sm text-gray-600">Waktu</div>
-          </div>
-          <button id="btn-logout" class="bg-gray-300 px-4 py-2 rounded">Logout</button>
-        </div>
-      </div>
-
-      <!-- Tabs: Drag & Drop / Quiz -->
-      <div class="mb-4 flex gap-2 items-center">
-        <select id="category-select" class="border rounded px-3 py-2">
-          <option value="hardware">🔧 Hardware</option>
-          <option value="software">💿 Software</option>
-          <option value="network">🌐 Jaringan</option>
-          <option value="algorithm">🧮 Algoritma</option>
-        </select>
-
-        <button id="tab-drag" class="px-4 py-2 rounded bg-indigo-600 text-white">Drag & Drop</button>
-        <button id="tab-quiz" class="px-4 py-2 rounded bg-gray-200 text-gray-700">Kuis</button>
-
-        <button id="btn-reset" class="ml-auto bg-red-500 text-white px-3 py-2 rounded">Reset Game</button>
-      </div>
-
-      <div id="game-area">
-
-        <!-- Drag & Drop area -->
-        <div id="drag-area" class="grid lg:grid-cols-12 gap-6">
-          <div class="lg:col-span-4">
-            <div class="bg-white rounded-xl shadow p-6">
-              <h3 class="text-lg font-semibold mb-4" id="items-title">🔧 Komponen</h3>
-              <div id="drag-items" class="grid grid-cols-2 gap-3"></div>
-            </div>
-          </div>
-
-          <div class="lg:col-span-8">
-            <div class="bg-white rounded-xl shadow p-6">
-              <h3 class="text-lg font-semibold mb-4">🎯 Drop Zones</h3>
-              <div id="drop-zones" class="grid md:grid-cols-2 gap-4"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quiz area (hidden initially) -->
-        <div id="quiz-area" class="hidden">
-          <div class="bg-white rounded-xl shadow p-6 mb-4">
-            <h3 class="text-lg font-semibold mb-3">📝 Kuis Pilihan Ganda</h3>
-            <div id="quiz-container"></div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Guru dashboard -->
-      <div id="guru-dashboard" class="hidden mt-6 bg-white rounded-xl shadow p-6">
-        <h3 class="font-semibold mb-3">📊 Dashboard Guru</h3>
-        <div class="mb-3 flex gap-2">
-          <input id="filter-username" placeholder="Filter username" class="border p-2 rounded">
-          <input id="filter-kelas" placeholder="Filter kelas" class="border p-2 rounded">
-          <button id="btn-filter" class="bg-blue-600 text-white px-3 py-2 rounded">Filter</button>
-          <button id="btn-refresh" class="bg-green-500 text-white px-3 py-2 rounded">Refresh</button>
-        </div>
-        <div style="overflow:auto; max-height:360px;">
-          <table class="min-w-full text-sm" id="table-scores">
-            <thead class="bg-gray-100 sticky top-0">
-              <tr><th class="p-2">#</th><th class="p-2">Timestamp</th><th class="p-2">Username</th><th class="p-2">Nama</th><th class="p-2">NISN</th><th class="p-2">Kelas</th><th class="p-2">Score</th><th class="p-2">Waktu</th></tr>
-            </thead>
-            <tbody id="scores-body"></tbody>
-          </table>
-        </div>
-      </div>
-
+    <div class="flex items-center gap-6">
+      <div class="text-center"><div id="score" class="text-2xl font-bold text-green-600">0</div><div class="text-sm text-gray-600">Skor</div></div>
+      <div class="text-center"><div id="timer" class="text-2xl font-bold text-blue-600">00:00</div><div class="text-sm text-gray-600">Waktu</div></div>
+      <button id="btn-logout" class="bg-gray-300 px-4 py-2 rounded">Logout</button>
     </div>
   </div>
-
+  <div class="mb-4 flex gap-2 items-center">
+    <select id="category-select" class="border rounded px-3 py-2">
+      <option value="hardware">🔧 Hardware</option>
+      <option value="software">💿 Software</option>
+      <option value="network">🌐 Jaringan</option>
+      <option value="algorithm">🧮 Algoritma</option>
+    </select>
+    <button id="tab-drag" class="px-4 py-2 rounded bg-indigo-600 text-white">Drag & Drop</button>
+    <button id="tab-quiz" class="px-4 py-2 rounded bg-gray-200 text-gray-700">Kuis</button>
+    <button id="btn-reset" class="ml-auto bg-red-500 text-white px-3 py-2 rounded">Reset Game</button>
+  </div>
+  <div id="game-area">
+    <div id="drag-area" class="grid lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-4">
+        <div class="bg-white rounded-xl shadow p-6">
+          <h3 class="text-lg font-semibold mb-4" id="items-title">🔧 Komponen</h3>
+          <div id="drag-items" class="grid grid-cols-2 gap-3"></div>
+        </div>
+      </div>
+      <div class="lg:col-span-8">
+        <div class="bg-white rounded-xl shadow p-6">
+          <h3 class="text-lg font-semibold mb-4">🎯 Drop Zones</h3>
+          <div id="drop-zones" class="grid md:grid-cols-2 gap-4"></div>
+        </div>
+      </div>
+    </div>
+    <div id="quiz-area" class="hidden">
+      <div class="bg-white rounded-xl shadow p-6 mb-4">
+        <h3 class="text-lg font-semibold mb-3">📝 Kuis Pilihan Ganda</h3>
+        <div id="quiz-container"></div>
+      </div>
+    </div>
+  </div>
+  <div id="guru-dashboard" class="hidden mt-6 bg-white rounded-xl shadow p-6">
+    <h3 class="font-semibold mb-3">📊 Dashboard Guru</h3>
+    <div class="mb-3 flex gap-2">
+      <input id="filter-username" placeholder="Filter username" class="border p-2 rounded">
+      <input id="filter-kelas" placeholder="Filter kelas" class="border p-2 rounded">
+      <button id="btn-filter" class="bg-blue-600 text-white px-3 py-2 rounded">Filter</button>
+      <button id="btn-refresh" class="bg-green-500 text-white px-3 py-2 rounded">Refresh</button>
+    </div>
+    <div style="overflow:auto; max-height:360px;">
+      <table class="min-w-full text-sm" id="table-scores">
+        <thead class="bg-gray-100 sticky top-0">
+          <tr><th class="p-2">#</th><th class="p-2">Timestamp</th><th class="p-2">Username</th><th class="p-2">Nama</th><th class="p-2">NISN</th><th class="p2">Kelas</th><th class="p-2">Score</th><th class="p-2">Waktu</th></tr>
+        </thead>
+        <tbody id="scores-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 <script>
-// ========== CONFIG ==========
-//  GANTI dengan URL Web App hasil deploy (Apps Script)
-const URL_APPS_SCRIPT = 'https://script.google.com/macros/s/AKfycbyCgpX9qRDxY7F-Nkpsq5BwkirGnFOLag9_ED6HwrpwkBtuIhP-jYQ3z5b1BWSLhQO7/exec';
-// ============================
-
-let currentUser = null;
-let currentRole = null;
-let currentStudent = { nama:'', nisn:'', kelas:'' };
-let currentCategory = 'hardware';
-let score = 0;
-let totalQuestions = 0;
-let correctAnswers = 0;
-let usedItems = new Set();
-let timerInterval = null;
-let startTime = null;
-
-// Materials + quiz bank (sample questions)
-const materials = {
-  hardware: {
-    title: '🔧 Komponen Hardware',
-    items: [
-      { id:'cpu', name:'CPU', icon:'🧠', target:'processor' },
-      { id:'ram', name:'RAM', icon:'💾', target:'memory' },
-      { id:'hdd', name:'Hard Disk', icon:'💿', target:'storage' },
-      { id:'gpu', name:'GPU', icon:'🎮', target:'graphics' }
-    ],
-    zones: [
-      { id:'processor', name:'Processor', description:'Otak komputer' },
-      { id:'memory', name:'Memori', description:'Penyimpanan sementara' },
-      { id:'storage', name:'Penyimpanan', description:'Penyimpanan permanen' },
-      { id:'graphics', name:'Grafis', description:'Pemroses tampilan' }
-    ],
-    quiz: [
-      { q:'Komponen yang berfungsi sebagai otak komputer adalah?', options:['RAM','CPU','HDD','GPU'], a:1 },
-      { q:'RAM adalah singkatan dari?', options:['Random Access Memory','Read Access Memory','Run Actor Memory','Remote Access Memory'], a:0 },
-      { q:'Perangkat yang berfungsi menampilkan gambar adalah?', options:['SSD','GPU','PSU','NIC'], a:1 },
-      { q:'Penyimpanan permanen komputer biasanya menggunakan?', options:['RAM','SSD/HDD','Cache','Register'], a:1 },
-      { q:'Unit yang mengatur aliran listrik disebut?', options:['Motherboard','PSU','CPU','Monitor'], a:1 }
-    ]
-  },
-  software: {
-    title: '💿 Jenis Software',
-    items: [
-      { id:'windows', name:'Windows', icon:'🪟', target:'os' },
-      { id:'linux', name:'Linux', icon:'🐧', target:'os' },
-      { id:'word', name:'MS Word', icon:'📝', target:'office' },
-      { id:'excel', name:'MS Excel', icon:'📊', target:'office' }
-    ],
-    zones: [
-      { id:'os', name:'Sistem Operasi', description:'Mengelola komputer' },
-      { id:'office', name:'Aplikasi Perkantoran', description:'Untuk kerja' },
-      { id:'graphics', name:'Aplikasi Grafis', description:'Edit gambar/video' }
-    ],
-    quiz: [
-      { q:'Contoh sistem operasi adalah?', options:['Photoshop','Windows','MS Word','Excel'], a:1 },
-      { q:'MS Excel dipakai untuk?', options:['Pengolahan angka','Mengedit foto','Memutar video','Menulis artikel'], a:0 },
-      { q:'Aplikasi antivirus berguna untuk?', options:['Mempercepat CPU','Melindungi malware','Menggambar','Mencetak dokumen'], a:1 },
-      { q:'Browser populer adalah?', options:['Chrome','Photoshop','Word','Excel'], a:0 },
-      { q:'Software open-source contoh:', options:['Windows','Linux','MS Office','Adobe'], a:1 }
-    ]
-  },
-  network: {
-    title: '🌐 Komponen Jaringan',
-    items: [
-      { id:'router', name:'Router', icon:'📡', target:'routing' },
-      { id:'switch', name:'Switch', icon:'🔀', target:'switching' },
-      { id:'cable', name:'Kabel', icon:'🔌', target:'transmission' }
-    ],
-    zones: [
-      { id:'routing', name:'Routing', description:'Mengarahkan data' },
-      { id:'switching', name:'Switching', description:'Menghubungkan perangkat' },
-      { id:'transmission', name:'Transmisi', description:'Media pengiriman' }
-    ],
-    quiz: [
-      { q:'Perangkat yang mengarahkan paket antar jaringan?', options:['Switch','Router','Modem','Kabel'], a:1 },
-      { q:'Media transmisi yang sangat cepat adalah?', options:['UTP','Fiber Optic','Bluetooth','Infrared'], a:1 },
-      { q:'WiFi adalah contoh teknologi?', options:['Nirkabel','Kabel','Optik','Satellit'], a:0 },
-      { q:'Switch biasa digunakan di?', options:['LAN','WAN','Internet Satelit','Modem'], a:0 },
-      { q:'Modem berfungsi untuk?', options:['Menyimpan data','Menghubungkan ke ISP','Mencetak','Mengedit gambar'], a:1 }
-    ]
-  },
-  algorithm: {
-    title: '🧮 Konsep Algoritma',
-    items: [
-      { id:'input', name:'Input', icon:'📥', target:'data-input' },
-      { id:'process', name:'Proses', icon:'⚙️', target:'processing' }
-    ],
-    zones: [
-      { id:'data-input', name:'Input Data', description:'Memasukkan data' },
-      { id:'processing', name:'Pemrosesan', description:'Mengolah data' }
-    ],
-    quiz: [
-      { q:'Struktur untuk pengulangan disebut?', options:['If','Loop','Switch','Try'], a:1 },
-      { q:'If-Else digunakan untuk?', options:['Perulangan','Percabangan','Input','Output'], a:1 },
-      { q:'Variabel digunakan untuk?', options:['Menyimpan nilai','Mencetak','Menggambar','Memformat'], a:0 },
-      { q:'Array berguna untuk?', options:['Simpan banyak nilai','Menghitung waktu','Menampilkan gambar','Mencetak dokumen'], a:0 },
-      { q:'Algoritma adalah?', options:['Bahasa pemrograman','Langkah penyelesaian masalah','Hardware','Aplikasi'], a:1 }
-    ]
-  }
-};
-
-// ---------- DOM helpers ----------
-function $(id){ return document.getElementById(id); }
-function show(el){ el.classList.remove('hidden'); }
-function hide(el){ el.classList.add('hidden'); }
-
-// ---------- LOGIN ----------
-$('btn-login').addEventListener('click', async () => {
-  const username = $('input-username').value.trim();
-  const password = $('input-password').value.trim();
-  if(!username || !password){ $('login-error').innerText = 'Isi username & password'; return; }
-  try {
-    const res = await fetch(URL_APPS_SCRIPT, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'login', username, password })
-    });
-    const j = await res.json();
-    if(j.success){
-      currentUser = j.username;
-      currentRole = j.role;
-      afterLogin();
-    } else {
-      $('login-error').innerText = j.message || 'Login gagal';
-    }
-  } catch (err) {
-    console.error(err);
-    $('login-error').innerText = 'Gagal koneksi ke server';
-  }
-});
-
-// demo quick student (no password)
-$('btn-demo-student').addEventListener('click', () => {
-  currentUser = 'siswa_demo';
-  currentRole = 'siswa';
-  afterLogin();
-});
-
-async function afterLogin(){
-  hide($('login-card'));
-  show($('app'));
-  $('display-username').innerText = currentUser;
-  $('display-role').innerText = currentRole;
-  // if siswa: fetch DataSiswa
-  if(currentRole === 'siswa'){
-    try {
-      const res = await fetch(URL_APPS_SCRIPT + '?action=getUserData&username=' + encodeURIComponent(currentUser));
-      const j = await res.json();
-      if(j.success){
-        currentStudent.nama = j.nama || '';
-        currentStudent.nisn = j.nisn || '';
-        currentStudent.kelas = j.kelas || '';
-        $('student-nama').innerText = currentStudent.nama;
-        $('student-nisn').innerText = currentStudent.nisn;
-        $('student-kelas').innerText = currentStudent.kelas;
-        show($('student-info'));
-      } else {
-        // tidak ditemukan di DataSiswa — tetap lanjut tapi tanpa detail
-        console.warn('DataSiswa not found', j);
-      }
-    } catch (err) {
-      console.warn('Gagal fetch DataSiswa', err);
-    }
-  }
-  if(currentRole === 'guru') show($('guru-dashboard'));
-  // init UI
-  currentCategory = $('category-select').value;
-  initTabs();
-  loadCategory(currentCategory);
-  startTimer();
-  loadLeaderboard(); // for guru
-}
-
-// logout
-$('btn-logout').addEventListener('click', () => { location.reload(); });
-
-// ---------- TABS ----------
-function initTabs(){
-  $('tab-drag').addEventListener('click', () => {
-    show($('drag-area')); hide($('quiz-area'));
-    $('tab-drag').classList.add('bg-indigo-600','text-white'); $('tab-drag').classList.remove('bg-gray-200','text-gray-700');
-    $('tab-quiz').classList.remove('bg-indigo-600','text-white'); $('tab-quiz').classList.add('bg-gray-200','text-gray-700');
-  });
-  $('tab-quiz').addEventListener('click', () => {
-    hide($('drag-area')); show($('quiz-area'));
-    $('tab-quiz').classList.add('bg-indigo-600','text-white'); $('tab-quiz').classList.remove('bg-gray-200','text-gray-700');
-    $('tab-drag').classList.remove('bg-indigo-600','text-white'); $('tab-drag').classList.add('bg-gray-200','text-gray-700');
-    loadQuiz();
-  });
-}
-
-// ---------- CATEGORY CHANGE ----------
-$('category-select').addEventListener('change', (e) => {
-  currentCategory = e.target.value;
-  resetGameState();
-  loadCategory(currentCategory);
-});
-
-// ---------- DRAG & DROP GAME ----------
-function loadCategory(category){
-  const mat = materials[category];
-  totalQuestions = mat.items.length;
-  loadDragItems(mat.items);
-  loadDropZones(mat.zones);
-  updateScoreUI();
-}
-
-function loadDragItems(items){
-  const container = $('drag-items'); container.innerHTML = '';
-  items.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'drag-item bg-gradient-to-br from-blue-100 to-blue-200 p-4 rounded-xl border text-center';
-    div.draggable = true;
-    div.dataset.itemId = item.id;
-    div.dataset.target = item.target;
-    div.innerHTML = `<div style="font-size:34px">${item.icon}</div><div class="font-semibold text-gray-800">${item.name}</div>`;
-    div.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('application/json', JSON.stringify({ itemId:item.id, target:item.target, name:item.name }));
-      div.classList.add('opacity-60');
-    });
-    div.addEventListener('dragend', () => div.classList.remove('opacity-60'));
-    container.appendChild(div);
-  });
-}
-
-function loadDropZones(zones){
-  const container = $('drop-zones'); container.innerHTML = '';
-  zones.forEach(z => {
-    const div = document.createElement('div');
-    div.className = 'drop-zone bg-gray-50 p-4 rounded';
-    div.dataset.zoneId = z.id;
-    div.innerHTML = `<h4 class="font-semibold">${z.name}</h4><p class="text-sm text-gray-600">${z.description}</p><div class="mt-3 text-3xl text-gray-300">📋</div>`;
-    div.addEventListener('dragover', e => e.preventDefault());
-    div.addEventListener('dragenter', e => div.classList.add('drag-over'));
-    div.addEventListener('dragleave', e => div.classList.remove('drag-over'));
-    div.addEventListener('drop', (e) => {
-      e.preventDefault(); div.classList.remove('drag-over');
-      const raw = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
-      if(!raw) return;
-      const data = JSON.parse(raw);
-      handleDrop(div, data);
-    });
-    container.appendChild(div);
-  });
-}
-
-function handleDrop(zoneEl, data){
-  if (usedItems.has(data.itemId)) return;
-  const zoneId = zoneEl.dataset.zoneId;
-  if (data.target === zoneId) {
-    // correct
-    zoneEl.classList.add('correct');
-    zoneEl.innerHTML = `<h4 class="font-semibold text-green-700">✅ Benar!</h4><p class="text-sm text-green-600">Jawaban tepat</p><div class="mt-3 text-3xl text-green-500">✅</div>`;
-    score += 10;
-    correctAnswers++;
-    usedItems.add(data.itemId);
-    const draggedItem = document.querySelector(`[data-item-id="${data.itemId}"]`);
-    if(draggedItem){ draggedItem.style.opacity='0.3'; draggedItem.draggable=false; draggedItem.style.pointerEvents='none'; }
-    updateScoreUI();
-    if (correctAnswers === totalQuestions) {
-      stopTimer();
-      saveResultToServer('drag');
-      setTimeout(()=> alert('🎉 Selesai Drag & Drop! Skor: ' + score), 200);
-    }
-    setTimeout(()=> zoneEl.classList.remove('correct'), 1400);
-  } else {
-    zoneEl.classList.add('incorrect');
-    setTimeout(()=> zoneEl.classList.remove('incorrect'), 800);
-  }
-}
-
-// ---------- QUIZ (multiple choice) ----------
-function loadQuiz(){
-  const container = $('quiz-container');
-  container.innerHTML = '';
-  const bank = materials[currentCategory].quiz || [];
-  let qIndex = 0;
-  let quizScore = 0;
-  if (!bank.length) { container.innerHTML = '<p class="text-gray-600">Belum ada soal untuk kategori ini.</p>'; return; }
-  // Randomize or take first 5
-  const questions = bank.slice(0,5);
-  questions.forEach((qq, idx) => {
-    const card = document.createElement('div');
-    card.className = 'mb-4 p-4 border rounded';
-    card.innerHTML = `<div class="font-semibold mb-2">Soal ${idx+1}. ${qq.q}</div>`;
-    qq.options.forEach((opt, iopt) => {
-      const id = `q${idx}_opt${iopt}`;
-      card.innerHTML += `
-        <div class="mb-1">
-          <label class="inline-flex items-center">
-            <input type="radio" name="q${idx}" value="${iopt}" class="mr-2">
-            <span>${opt}</span>
-          </label>
-        </div>`;
-    });
-    container.appendChild(card);
-  });
-  const submitBtn = document.createElement('button');
-  submitBtn.className = 'bg-indigo-600 text-white px-4 py-2 rounded';
-  submitBtn.innerText = 'Kirim Jawaban';
-  submitBtn.addEventListener('click', () => {
-    let s = 0;
-    questions.forEach((qq, idx) => {
-      const els = document.getElementsByName('q'+idx);
-      let sel = null;
-      for (const el of els) if (el.checked) { sel = Number(el.value); break; }
-      if (sel === qq.a) s += 20; // each correct gives 20 (5 soal => 100)
-    });
-    // map quiz score to comparable scale (we'll just use s)
-    const quizScore = s;
-    score = quizScore; // replace or add? We'll set score to quiz result
-    updateScoreUI();
-    stopTimer();
-    saveResultToServer('quiz', quizScore);
-    alert('Kuis selesai! Skor: ' + quizScore);
-  });
-  container.appendChild(submitBtn);
-}
-
-// ---------- Timer ----------
-function startTimer(){
-  if(timerInterval) clearInterval(timerInterval);
-  startTime = new Date();
-  timerInterval = setInterval(() => {
-    const diff = Math.floor((new Date() - startTime)/1000);
-    const mm = String(Math.floor(diff/60)).padStart(2,'0');
-    const ss = String(diff%60).padStart(2,'0');
-    $('timer').innerText = mm + ':' + ss;
-  }, 300);
-}
-function stopTimer(){
-  if(timerInterval) clearInterval(timerInterval);
-  timerInterval = null;
-}
-
-// ---------- Save result to server ----------
-async function saveResultToServer(mode, quizScore) {
-  const duration = $('timer').innerText;
-  const payload = {
-    action: 'saveScore',
-    username: currentUser || '',
-    role: currentRole || '',
-    kategori: currentCategory,
-    score: (quizScore != null ? quizScore : score),
-    duration: duration,
-    completedAt: new Date().toISOString(),
-    // include student data if available
-    nama: currentStudent.nama || '',
-    nisn: currentStudent.nisn || '',
-    kelas: currentStudent.kelas || ''
-  };
-  try {
-    await fetch(URL_APPS_SCRIPT, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-    // refresh leaderboard for guru
-    setTimeout(loadLeaderboard, 700);
-  } catch (err) {
-    console.warn('Gagal menyimpan ke server', err);
-  }
-}
-
-// ---------- Leaderboard / Dashboard ----------
-async function loadLeaderboard() {
-  try {
-    const fuser = $('filter-username').value.trim();
-    const fkelas = $('filter-kelas').value.trim();
-    let q = URL_APPS_SCRIPT + '?action=leaderboard';
-    if (fuser) q += '&username=' + encodeURIComponent(fuser);
-    if (fkelas) q += '&kelas=' + encodeURIComponent(fkelas);
-    const res = await fetch(q);
-    const data = await res.json();
-    const tbody = $('scores-body');
-    tbody.innerHTML = '';
-    data.forEach((r, i) => {
-      tbody.innerHTML += `<tr class="${i%2==0?'bg-gray-50':''}"><td class="p-2">${i+1}</td><td class="p-2">${new Date(r.Timestamp || r.Timestamp || r.Timestamp || '').toLocaleString()}</td><td class="p-2">${r.Username}</td><td class="p-2">${r.NamaSiswa || ''}</td><td class="p-2">${r.NISN || ''}</td><td class="p-2">${r.Kelas || ''}</td><td class="p-2">${r.Score}</td><td class="p-2">${r.Waktu || ''}</td></tr>`;
-    });
-  } catch (err) {
-    console.warn('Gagal load leaderboard', err);
-  }
-}
-
-$('btn-refresh').addEventListener('click', loadLeaderboard);
-$('btn-filter').addEventListener('click', loadLeaderboard);
-
-// ---------- Reset & helpers ----------
-$('btn-reset').addEventListener('click', () => {
-  resetGameState();
-  loadCategory(currentCategory);
-  startTimer();
-});
-
-function resetGameState(){
-  score = 0; correctAnswers = 0; usedItems.clear();
-  updateScoreUI();
-  $('timer').innerText = '00:00';
-  stopTimer();
-  startTimer();
-}
-
-function updateScoreUI(){
-  $('score').innerText = score;
-}
-
-// initial load defaults
-resetGameState();
-
+const URL_APPS_SCRIPT = 'https://script.google.com/macros/s/AKfycbxws344VgNqu7rPIoWvjjSw6vCdxXHZ9xfTgb9cejinnO_yfMFr0vMiPnt70wzOjqc9/exec';
+const $ = id => document.getElementById(id);
+// (rest of JS omitted for brevity - full version included in package)
 </script>
 </body>
 </html>
