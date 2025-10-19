@@ -3,233 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portal Belajar Informatika SMPN 10</title>
-
-<!-- Tailwind CSS -->
-<script src="https://cdn.tailwindcss.com"></script>
-<!-- Bootstrap CSS -->
+<title>Portal Belajar Informatika SMPN 10 BANAWA SELATAN</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
-/* Login Form Custom */
-#loginForm {
-    max-width: 350px;
-    margin: 2rem auto;
-    padding: 2rem;
-    border-radius: 10px;
-    background-color: #f9f9f9;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-#dashboard {
-    display: none;
-    margin-top: 2rem;
-}
-.quiz-container, .game-container {
-    margin-top: 2rem;
-}
-.quiz-question img, .quiz-question video {
-    max-width: 100%;
-    margin: 10px 0;
-}
-.timer {
-    font-weight: bold;
-    margin-bottom: 10px;
-}
+  body { background:#f3f4f6; }
+  #loginForm { max-width:350px; margin:auto; margin-top:5%; padding:20px; background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+  .game-item { width:80px; height:80px; margin:5px; cursor:pointer; }
+  .drop-target { width:100px; height:100px; margin:5px; border:2px dashed #333; display:inline-block; vertical-align:top; }
 </style>
 </head>
-<body class="bg-gray-100">
+<body>
 
-<div class="text-center mt-4">
-    <img src="smpn10.jpg" alt="Logo SMPN 10" class="mx-auto" style="max-height:80px;">
-    <h1 class="text-2xl font-bold mt-2">Portal Belajar Informatika SMPN 10 BANAWA SELATAN</h1>
+<div id="loginForm" class="text-center">
+  <img src="smpn10.jpg" class="img-fluid mb-3" alt="Logo Sekolah" style="max-height:80px;">
+  <h4 class="mb-3">Login Portal</h4>
+  <input type="text" id="username" placeholder="Username" class="form-control mb-2">
+  <input type="password" id="password" placeholder="Password" class="form-control mb-2">
+  <button class="btn btn-primary w-100" onclick="login()">Login</button>
+  <div id="loginMessage" class="mt-2 text-danger"></div>
 </div>
 
-<!-- Login Form -->
-<div id="loginForm" class="shadow-md">
-    <h2 class="text-xl font-semibold text-center mb-4">Login</h2>
-    <div class="mb-3">
-        <input type="text" id="username" placeholder="Username" class="form-control">
-    </div>
-    <div class="mb-3">
-        <input type="password" id="password" placeholder="Password" class="form-control">
-    </div>
-    <div class="d-grid">
-        <button id="btnLogin" class="btn btn-primary">Login</button>
-    </div>
-    <p id="loginMsg" class="text-center text-red-500 mt-2"></p>
-</div>
-
-<!-- Dashboard -->
-<div id="dashboard" class="container">
-    <div class="flex justify-between items-center mb-4">
-        <div>
-            <h2 id="welcomeMsg" class="text-xl font-bold"></h2>
-            <p id="kelasInfo"></p>
-        </div>
-        <button id="btnLogout" class="btn btn-danger btn-sm">Logout</button>
-    </div>
-
-    <!-- Quiz Section -->
-    <div class="quiz-container bg-white p-4 rounded shadow mb-6">
-        <h3 class="font-bold mb-2">Kuis Interaktif</h3>
-        <div class="timer text-red-600">Waktu: <span id="quizTimer">00:00</span></div>
-        <div id="quizContent"></div>
-        <button id="submitQuiz" class="btn btn-success mt-2">Submit Quiz</button>
-        <p id="quizScore" class="font-bold mt-2"></p>
-    </div>
-
-    <!-- Drag & Drop Game Section -->
-    <div class="game-container bg-white p-4 rounded shadow">
-        <h3 class="font-bold mb-2">Game Drag & Drop</h3>
-        <div id="gameItems" class="flex flex-wrap gap-2"></div>
-        <p id="gameMsg" class="mt-2 font-semibold text-green-600"></p>
-    </div>
+<div id="mainContent" style="display:none; padding:20px;">
+  <h3>Selamat Datang, <span id="userLabel"></span></h3>
+  <div id="quizArea"></div>
+  <h4 class="mt-4">Drag & Drop Game</h4>
+  <div id="gameArea" class="flex flex-wrap"></div>
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztYkIdGmOnDmJWhnuZQAxP6RGPNOt9vD0czsnSpdLsDq0wvNf24v54O2lcOu5oM2K5/exec';
-
-// ====================== Login ======================
-document.getElementById('btnLogin').addEventListener('click', async()=>{
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    if(!username || !password) { showMsg('loginMsg','Isi username dan password'); return; }
-
-    try{
-        const res = await fetch(SCRIPT_URL,{
-            method:'POST',
-            body: JSON.stringify({action:'login', username, password})
-        });
-        const data = await res.json();
-        if(data.success){
-            localStorage.setItem('username', data.username);
-            localStorage.setItem('role', data.role);
-            loadDashboard(data.username, data.role);
-        } else {
-            showMsg('loginMsg', data.message || 'Login gagal');
-        }
-    } catch(err){
-        showMsg('loginMsg', 'Gagal koneksi ke server');
+let currentUser = {};
+function login(){
+  const username=document.getElementById('username').value;
+  const password=document.getElementById('password').value;
+  fetch('https://script.google.com/macros/s/AKfycbz57me8p2_VVbQAp5aVWVSMXjG5en2gPxhEL757Kf77IAmmYj_yp2PI_xYbWBRVusKZ/exec',{
+    method:'POST',
+    body:JSON.stringify({action:'login',username,password})
+  }).then(r=>r.json()).then(res=>{
+    if(res.success){
+      currentUser=res;
+      document.getElementById('loginForm').style.display='none';
+      document.getElementById('mainContent').style.display='block';
+      document.getElementById('userLabel').innerText=res.username;
+      loadGameItems();
+    }else{
+      document.getElementById('loginMessage').innerText=res.message;
     }
-});
-
-document.getElementById('btnLogout').addEventListener('click', ()=>{
-    localStorage.clear();
-    document.getElementById('dashboard').style.display='none';
-    document.getElementById('loginForm').style.display='block';
-});
-
-// ====================== Dashboard ======================
-async function loadDashboard(username, role){
-    document.getElementById('loginForm').style.display='none';
-    document.getElementById('dashboard').style.display='block';
-
-    // Ambil data siswa
-    let nama='', kelas='';
-    try{
-        const res = await fetch(`${SCRIPT_URL}?action=getUserData&username=${username}`);
-        const data = await res.json();
-        if(data.success){ nama=data.nama; kelas=data.kelas; }
-    } catch(err){}
-
-    document.getElementById('welcomeMsg').textContent=`Selamat datang, ${nama || username}`;
-    document.getElementById('kelasInfo').textContent=kelas ? `Kelas: ${kelas}` : '';
-
-    loadQuiz();
-    loadGame();
+  });
 }
 
-// ====================== Quiz ======================
-let quizData=[], currentQuiz=0, quizTimerInterval, quizTime=300; // 5 menit default
+function loadGameItems(){
+  fetch('https://script.google.com/macros/s/YOUR_DEPLOYED_SCRIPT_ID/exec',{
+    method:'POST',
+    body:JSON.stringify({action:'getGameItems'})
+  }).then(r=>r.json()).then(data=>{
+    const area=document.getElementById('gameArea');
+    area.innerHTML='';
+    data.forEach(item=>{
+      const img=document.createElement('img');
+      img.src=item.Image;
+      img.className='game-item';
+      img.draggable=true;
+      img.ondragstart=e=>e.dataTransfer.setData('text',item.Item);
+      area.appendChild(img);
 
-async function loadQuiz(){
-    try{
-        const res = await fetch(`${SCRIPT_URL}?action=getQuiz`);
-        const data = await res.json();
-        if(data.success){ quizData = data.data; renderQuiz(); startTimer(); }
-    } catch(err){ console.error(err); }
-}
-
-function renderQuiz(){
-    const container = document.getElementById('quizContent');
-    container.innerHTML='';
-    quizData.forEach((q,i)=>{
-        const div = document.createElement('div');
-        div.classList.add('quiz-question','mb-2','p-2','border','rounded');
-        div.innerHTML = `<p>${i+1}. ${q.Question || ''}</p>`;
-        if(q.Image) div.innerHTML+=`<img src="${q.Image}" alt="image">`;
-        if(q.Video) div.innerHTML+=`<video src="${q.Video}" controls></video>`;
-        ['A','B','C','D'].forEach(opt=>{
-            if(q[opt]){
-                div.innerHTML+=`<div><input type="radio" name="q${i}" value="${opt}"> ${q[opt]}</div>`;
-            }
-        });
-        container.appendChild(div);
+      const target=document.createElement('div');
+      target.className='drop-target';
+      target.ondragover=e=>e.preventDefault();
+      target.ondrop=e=>{
+        e.preventDefault();
+        const dragged=e.dataTransfer.getData('text');
+        if(dragged===item.Target) alert('Benar!');
+        else alert('Salah!');
+      };
+      area.appendChild(target);
     });
+  });
 }
-
-document.getElementById('submitQuiz').addEventListener('click', async()=>{
-    let score=0;
-    quizData.forEach((q,i)=>{
-        const selected = document.querySelector(`input[name="q${i}"]:checked`);
-        if(selected && selected.value===q.Answer) score++;
-    });
-    document.getElementById('quizScore').textContent=`Skor Anda: ${score} / ${quizData.length}`;
-    clearInterval(quizTimerInterval);
-
-    // Simpan skor ke server
-    const username = localStorage.getItem('username');
-    const role = localStorage.getItem('role');
-    try{
-        await fetch(SCRIPT_URL,{
-            method:'POST',
-            body: JSON.stringify({action:'saveScore', username, score, role, kategori:'Quiz'})
-        });
-    } catch(err){}
-});
-
-function startTimer(){
-    let time = quizTime;
-    quizTimerInterval = setInterval(()=>{
-        const min = Math.floor(time/60);
-        const sec = time%60;
-        document.getElementById('quizTimer').textContent=`${min.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-        if(time<=0) clearInterval(quizTimerInterval);
-        time--;
-    },1000);
-}
-
-// ====================== Drag & Drop Game ======================
-async function loadGame(){
-    try{
-        const res = await fetch(`${SCRIPT_URL}?action=getGameItems`);
-        const data = await res.json();
-        if(data.success){
-            const container = document.getElementById('gameItems');
-            data.data.forEach((item,i)=>{
-                const div = document.createElement('div');
-                div.textContent=item;
-                div.classList.add('p-2','bg-blue-200','rounded','cursor-pointer');
-                div.draggable = true;
-                div.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', item); });
-                container.appendChild(div);
-            });
-        }
-    } catch(err){ console.error(err); }
-}
-
-// ====================== Helper ======================
-function showMsg(elId, msg){
-    const el = document.getElementById(elId);
-    if(el){ el.textContent = msg; }
-}
-
-// Auto login jika sudah login sebelumnya
-window.addEventListener('load', ()=>{
-    const username = localStorage.getItem('username');
-    const role = localStorage.getItem('role');
-    if(username && role) loadDashboard(username, role);
-});
 </script>
 
 </body>
