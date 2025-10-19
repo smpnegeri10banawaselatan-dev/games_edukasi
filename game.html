@@ -16,7 +16,7 @@
 <div id="gameArea" class="grid grid-cols-2 gap-4"></div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMu-EqAQekJXP2OSGy4ThkVeTAXkfcdjxh3_xfXhLb56SXSi3EqHr0ESA7RKm6p7NV/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwckAXJVIek1UpYgBroZhLVbXBcXeMpxf8d54VfGUSSDx6G-ygbFpQVtRXMvqBFTIbS/exec";
 async function loadGame(){
   const res = await axios.post(SCRIPT_URL, { action:'getGameItems' });
   const gameArea = document.getElementById('gameArea');
