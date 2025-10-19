@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kuis Interaktif</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="p-4 bg-gray-100">
+<h2 class="text-xl font-bold mb-2">Kuis Pilihan Ganda</h2>
+<div id="quizArea"></div>
+<p>Waktu tersisa: <span id="timer">60</span> detik</p>
+<button id="submitQuiz" class="bg-green-600 text-white px-4 py-2 rounded mt-2">Submit</button>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMu-EqAQekJXP2OSGy4ThkVeTAXkfcdjxh3_xfXhLb56SXSi3EqHr0ESA7RKm6p7NV/exec";
+let quizData=[], score=0;
+async function loadQuiz(){
+  const res = await axios.post(SCRIPT_URL,{action:'getQuizItems'});
+  quizData=res.data;
+  const area=document.getElementById('quizArea');
+  quizData.forEach((q,i)=>{
+    const div=document.createElement('div');
+    div.className='mb-4 p-2 border rounded bg-white';
+    div.innerHTML=`<p>${i+1}. ${q.Pertanyaan}</p>`;
+    ['A','B','C','D'].forEach(opt=>{
+      let optVal = q[opt];
+      if(optVal.includes('http')) optVal = `<img src="${optVal}" class="w-24">`;
+      div.innerHTML+=`<label><input type="radio" name="q${i}" value="${opt}"> ${optVal}</label><br>`;
+    });
+    area.appendChild(div);
+  });
+}
+loadQuiz();
+
+// Timer
+let timeLeft=60;
+const timerEl=document.getElementById('timer');
+const timer=setInterval(()=>{
+  timeLeft--;
+  timerEl.innerText=timeLeft;
+  if(timeLeft<=0) clearInterval(timer);
+},1000);
+
+document.getElementById('submitQuiz').addEventListener('click', ()=>{
+  score=0;
+  quizData.forEach((q,i)=>{
+    const sel=document.querySelector(`input[name="q${i}"]:checked`);
+    if(sel && sel.value===q.Jawaban) score++;
+  });
+  alert('Skor Anda: '+score);
+});
+</script>
+</body>
+</html>
