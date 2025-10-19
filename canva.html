@@ -85,7 +85,7 @@
     <div class="text-center">
      <div class="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4"><i class="fas fa-graduation-cap text-white text-2xl"></i>
      </div>
-     <h2 id="schoolName" class="text-3xl font-bold text-gray-900 mb-2">SMA Negeri 1</h2>
+     <h2 id="schoolName" class="text-3xl font-bold text-gray-900 mb-2">SMPN 10 BANAWA SELATAN</h2>
      <p id="welcomeMessage" class="text-gray-600">Selamat datang di sistem pembelajaran interaktif</p>
     </div>
     <form id="loginForm" class="mt-8 space-y-6">
@@ -852,24 +852,48 @@
             mediaContainer.classList.add('hidden');
             questionImage.classList.add('hidden');
             questionVideo.classList.add('hidden');
+            questionImage.src = '';
+            questionVideo.src = '';
             
-            // Check for image or video media
-            if (question.media_image && question.media_image.trim() !== '') {
+            // Check for media links from Quiz sheet
+            let hasMedia = false;
+            
+            // Check for image media (column 7 in CSV - media_image)
+            if (question.media_image && question.media_image.trim() !== '' && question.media_image.startsWith('http')) {
                 mediaContainer.classList.remove('hidden');
                 questionImage.src = question.media_image;
                 questionImage.classList.remove('hidden');
+                questionImage.alt = `Media untuk pertanyaan ${currentQuestionIndex + 1}`;
                 questionImage.onerror = function() {
+                    console.log('Failed to load image:', this.src);
                     this.style.display = 'none';
+                    if (!questionVideo.classList.contains('hidden')) {
+                        return; // Keep container visible if video is showing
+                    }
                     mediaContainer.classList.add('hidden');
                 };
-            } else if (question.media_video && question.media_video.trim() !== '') {
+                hasMedia = true;
+            }
+            
+            // Check for video media (column 8 in CSV - media_video)  
+            if (question.media_video && question.media_video.trim() !== '' && question.media_video.startsWith('http')) {
                 mediaContainer.classList.remove('hidden');
                 questionVideo.src = question.media_video;
                 questionVideo.classList.remove('hidden');
                 questionVideo.onerror = function() {
+                    console.log('Failed to load video:', this.src);
                     this.style.display = 'none';
+                    if (!questionImage.classList.contains('hidden')) {
+                        return; // Keep container visible if image is showing
+                    }
                     mediaContainer.classList.add('hidden');
                 };
+                hasMedia = true;
+            }
+            
+            // If no valid media links found, hide container
+            if (!hasMedia) {
+                mediaContainer.classList.add('hidden');
             }
 
             // Load options
@@ -1186,50 +1210,115 @@
         }
 
         // Show my scores
-        function showMyScores() {
+        async function showMyScores() {
             document.getElementById('studentDashboard').classList.add('hidden');
             document.getElementById('myScoresScreen').classList.remove('hidden');
             
-            // Get user's scores
-            const myScores = allData.filter(item => 
-                item.username === currentUser.username && item.score !== undefined
-            );
-            
-            // Sort by timestamp descending
-            myScores.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            
+            // Show loading message
             const tbody = document.getElementById('myScoresBody');
-            tbody.innerHTML = '';
-            
-            if (myScores.length === 0) {
-                const row = document.createElement('tr');
-                row.innerHTML = `
+            tbody.innerHTML = `
+                <tr>
                     <td colspan="4" class="px-6 py-4 text-center text-gray-500">
-                        Belum ada riwayat quiz
+                        <i class="fas fa-spinner fa-spin mr-2"></i>
+                        Memuat data skor dari Google Sheets...
                     </td>
-                `;
-                tbody.appendChild(row);
-                return;
-            }
+                </tr>
+            `;
             
-            myScores.forEach(score => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50';
+            try {
+                // Refresh external data to get latest scores from Scores sheet
+                await loadExternalData();
                 
-                const date = new Date(score.timestamp);
-                const formattedDate = date.toLocaleDateString('id-ID');
+                // Get user's scores from external Scores sheet first, then fallback to local data
+                let myScores = externalData.scores.filter(score => 
+                    score.username === currentUser.username && 
+                    score.kategori === 'Quiz' &&
+                    score.score !== undefined
+                );
                 
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formattedDate}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${score.kategori}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">${score.score}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${Math.floor(score.waktu/60)}:${(score.waktu%60).toString().padStart(2,'0')}
-                    </td>
+                // Fallback to local data if no external scores found
+                if (myScores.length === 0) {
+                    myScores = allData.filter(item => 
+                        item.username === currentUser.username && 
+                        item.score !== undefined &&
+                        item.kategori === 'Quiz'
+                    );
+                }
+                
+                // Sort by timestamp descending (newest first)
+                myScores.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                tbody.innerHTML = '';
+                
+                if (myScores.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Belum ada riwayat quiz. Silakan ikuti quiz terlebih dahulu.
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                    return;
+                }
+                
+                myScores.forEach((score, index) => {
+                    const row = document.createElement('tr');
+                    row.className = index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100';
+                    
+                    const date = new Date(score.timestamp);
+                    const formattedDate = date.toLocaleDateString('id-ID', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    // Add score badge based on performance
+                    let scoreBadge = '';
+                    if (score.score >= 90) {
+                        scoreBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2">Excellent</span>';
+                    } else if (score.score >= 80) {
+                        scoreBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">Good</span>';
+                    } else if (score.score >= 70) {
+                        scoreBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">Fair</span>';
+                    } else {
+                        scoreBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">Needs Improvement</span>';
+                    }
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formattedDate}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <i class="fas fa-question-circle mr-1 text-blue-500"></i>
+                            ${score.kategori}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
+                            ${score.score}%
+                            ${scoreBadge}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <i class="fas fa-clock mr-1"></i>
+                            ${Math.floor(score.waktu/60)}:${(score.waktu%60).toString().padStart(2,'0')}
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+                
+                console.log(`Loaded ${myScores.length} scores for user ${currentUser.username} from Scores sheet`);
+                
+            } catch (error) {
+                console.error('Error loading my scores:', error);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-red-500">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            Gagal memuat data skor. Periksa koneksi internet.
+                        </td>
+                    </tr>
                 `;
-                
-                tbody.appendChild(row);
-            });
+            }
         }
 
         // Start game
@@ -1419,5 +1508,5 @@
         // Initialize app when page loads
         document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'991015c9359ca060',t:'MTc2MDg3NDkxMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99102071e0513fa1',t:'MTc2MDg3NTM0OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
