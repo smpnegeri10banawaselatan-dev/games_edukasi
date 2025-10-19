@@ -1,0 +1,2117 @@
+<!doctype html>
+<html lang="id" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Pembelajaran Interaktif</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+        body {
+            box-sizing: border-box;
+        }
+        
+        .quiz-option {
+            transition: all 0.3s ease;
+        }
+        
+        .quiz-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .drag-item {
+            cursor: grab;
+            transition: all 0.3s ease;
+        }
+        
+        .drag-item:active {
+            cursor: grabbing;
+        }
+        
+        .drop-zone {
+            min-height: 120px;
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        
+        .drop-zone.drag-over {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        
+        .timer-warning {
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .score-animation {
+            animation: scoreUp 0.5s ease-out;
+        }
+        
+        @keyframes scoreUp {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .save-indicator {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full bg-gradient-to-br from-blue-50 to-indigo-100"><!-- Debug Panel -->
+  <div id="debugPanel" class="debug-panel hidden">
+   <div class="font-bold mb-2">
+    🔍 Debug Status
+   </div>
+   <div id="debugInfo">
+    Loading...
+   </div><button onclick="toggleDebugPanel()" class="mt-2 text-xs bg-red-500 px-2 py-1 rounded">Close</button>
+  </div><!-- Login Screen -->
+  <div id="loginScreen" class="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+   <div class="max-w-md w-full space-y-8">
+    <div class="text-center">
+     <div class="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4"><i class="fas fa-graduation-cap text-white text-2xl"></i>
+     </div>
+     <h2 id="schoolName" class="text-3xl font-bold text-gray-900 mb-2">SMPN 10 BANAWA SELATAN</h2>
+     <p id="welcomeMessage" class="text-gray-600">Selamat datang di sistem pembelajaran interaktif</p>
+    </div>
+    <form id="loginForm" class="mt-8 space-y-6">
+     <div class="space-y-4">
+      <div><label for="username" class="block text-sm font-medium text-gray-700 mb-2">Username</label> <input id="username" name="username" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Masukkan username">
+      </div>
+      <div><label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label> <input id="password" name="password" type="password" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Masukkan password">
+      </div>
+     </div><button type="submit" id="loginBtn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"> <span id="loginBtnText">Masuk</span> <i id="loginSpinner" class="fas fa-spinner fa-spin ml-2 hidden"></i> </button>
+    </form>
+    <div id="loginError" class="hidden mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm"></div>
+   </div>
+  </div><!-- Student Dashboard -->
+  <div id="studentDashboard" class="hidden min-h-full"><!-- Header -->
+   <nav class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+     <div class="flex justify-between items-center h-16">
+      <div class="flex items-center">
+       <div class="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center mr-3"><i class="fas fa-graduation-cap text-white text-sm"></i>
+       </div>
+       <h1 class="text-xl font-semibold text-gray-900">Dashboard Siswa</h1>
+       <div class="ml-4 flex items-center space-x-3">
+        <div class="flex items-center text-xs text-green-600">
+         <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div><span class="data-indicator">Data Tersimpan ke Google Sheets</span>
+        </div><button onclick="showDebugPanel()" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"> Debug Status </button>
+       </div>
+      </div>
+      <div class="flex items-center space-x-4"><span id="studentInfo" class="text-sm text-gray-600"></span> <button onclick="logout()" class="text-gray-500 hover:text-gray-700"> <i class="fas fa-sign-out-alt"></i> </button>
+      </div>
+     </div>
+    </div>
+   </nav><!-- Student Content -->
+   <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-6"><!-- Quiz Card -->
+      <div class="bg-white overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow">
+       <div class="p-6">
+        <div class="flex items-center">
+         <div class="flex-shrink-0">
+          <div class="h-12 w-12 bg-green-500 rounded-lg flex items-center justify-center"><i class="fas fa-question-circle text-white text-xl"></i>
+          </div>
+         </div>
+         <div class="ml-4">
+          <h3 id="quizTitle" class="text-lg font-medium text-gray-900">Quiz Interaktif</h3>
+          <p class="text-sm text-gray-500">Uji pengetahuan Anda</p>
+         </div>
+        </div>
+        <div class="mt-4"><button onclick="startQuiz()" class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"> Mulai Quiz </button>
+        </div>
+       </div>
+      </div><!-- Scores Card -->
+      <div class="bg-white overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow">
+       <div class="p-6">
+        <div class="flex items-center">
+         <div class="flex-shrink-0">
+          <div class="h-12 w-12 bg-purple-500 rounded-lg flex items-center justify-center"><i class="fas fa-trophy text-white text-xl"></i>
+          </div>
+         </div>
+         <div class="ml-4">
+          <h3 class="text-lg font-medium text-gray-900">Skor Saya</h3>
+          <p class="text-sm text-gray-500">Lihat hasil quiz</p>
+         </div>
+        </div>
+        <div class="mt-4"><button onclick="showMyScores()" class="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"> Lihat Skor </button>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div><!-- Teacher Dashboard -->
+  <div id="teacherDashboard" class="hidden min-h-full"><!-- Header -->
+   <nav class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+     <div class="flex justify-between items-center h-16">
+      <div class="flex items-center">
+       <div class="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center mr-3"><i class="fas fa-graduation-cap text-white text-sm"></i>
+       </div>
+       <h1 class="text-xl font-semibold text-gray-900">Dashboard Guru</h1>
+       <div class="ml-4 flex items-center space-x-3">
+        <div class="flex items-center text-xs text-green-600">
+         <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div><span class="data-indicator">Data Tersimpan ke Google Sheets</span>
+        </div><button onclick="showDebugPanel()" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"> Debug Status </button>
+       </div>
+      </div>
+      <div class="flex items-center space-x-4"><span id="teacherInfo" class="text-sm text-gray-600"></span> <button onclick="logout()" class="text-gray-500 hover:text-gray-700"> <i class="fas fa-sign-out-alt"></i> </button>
+      </div>
+     </div>
+    </div>
+   </nav><!-- Teacher Content -->
+   <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+     <div class="grid grid-cols-1 md:grid-cols-3 gap-6"><!-- Quiz Card -->
+      <div class="bg-white overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow">
+       <div class="p-6">
+        <div class="flex items-center">
+         <div class="flex-shrink-0">
+          <div class="h-12 w-12 bg-green-500 rounded-lg flex items-center justify-center"><i class="fas fa-question-circle text-white text-xl"></i>
+          </div>
+         </div>
+         <div class="ml-4">
+          <h3 id="teacherQuizTitle" class="text-lg font-medium text-gray-900">Quiz Interaktif</h3>
+          <p class="text-sm text-gray-500">Uji pengetahuan siswa</p>
+         </div>
+        </div>
+        <div class="mt-4"><button onclick="startQuizAsTeacher()" class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"> Mulai Quiz </button>
+        </div>
+       </div>
+      </div><!-- Leaderboard Card -->
+      <div class="bg-white overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow">
+       <div class="p-6">
+        <div class="flex items-center">
+         <div class="flex-shrink-0">
+          <div class="h-12 w-12 bg-yellow-500 rounded-lg flex items-center justify-center"><i class="fas fa-medal text-white text-xl"></i>
+          </div>
+         </div>
+         <div class="ml-4">
+          <h3 class="text-lg font-medium text-gray-900">Leaderboard</h3>
+          <p class="text-sm text-gray-500">Skor semua siswa</p>
+         </div>
+        </div>
+        <div class="mt-4"><button onclick="showLeaderboard()" class="w-full bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition-colors"> Lihat Leaderboard </button>
+        </div>
+       </div>
+      </div><!-- Game Card -->
+      <div class="bg-white overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow">
+       <div class="p-6">
+        <div class="flex items-center">
+         <div class="flex-shrink-0">
+          <div class="h-12 w-12 bg-red-500 rounded-lg flex items-center justify-center"><i class="fas fa-gamepad text-white text-xl"></i>
+          </div>
+         </div>
+         <div class="ml-4">
+          <h3 id="gameTitle" class="text-lg font-medium text-gray-900">Drag &amp; Drop Game</h3>
+          <p class="text-sm text-gray-500">Game edukatif</p>
+         </div>
+        </div>
+        <div class="mt-4"><button onclick="startGame()" class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors"> Mulai Game </button>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div><!-- Quiz Screen -->
+  <div id="quizScreen" class="hidden min-h-full bg-white">
+   <div class="max-w-4xl mx-auto py-6 px-4"><!-- Quiz Header -->
+    <div class="flex justify-between items-center mb-6">
+     <h2 class="text-2xl font-bold text-gray-900">Quiz Interaktif</h2>
+     <div class="flex items-center space-x-4">
+      <div id="timerDisplay" class="bg-red-100 text-red-800 px-3 py-1 rounded-lg font-medium"><i class="fas fa-clock mr-1"></i> <span id="timeLeft">10:00</span>
+      </div>
+      <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg font-medium">
+       Skor: <span id="currentScore">0</span>
+      </div><button onclick="showDebugPanel()" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"> Debug </button>
+     </div>
+    </div><!-- Quiz Content -->
+    <div id="quizContent" class="bg-white rounded-lg shadow-lg p-6">
+     <div class="mb-4"><span class="text-sm text-gray-500">Pertanyaan <span id="questionNumber">1</span> dari <span id="totalQuestions">10</span></span>
+     </div>
+     <div id="questionMedia" class="mb-6 hidden"><img id="questionImage" class="max-w-full h-64 object-cover rounded-lg mx-auto" alt="Question media">
+      <video id="questionVideo" class="max-w-full h-64 rounded-lg mx-auto hidden" controls></video>
+     </div>
+     <h3 id="questionText" class="text-xl font-semibold text-gray-900 mb-6">Loading question...</h3>
+     <div id="optionsContainer" class="space-y-3"><!-- Options will be populated here -->
+     </div>
+     <div class="mt-6 flex justify-between"><button onclick="previousQuestion()" id="prevBtn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50" disabled> <i class="fas fa-chevron-left mr-1"></i> Sebelumnya </button> <button onclick="nextQuestion()" id="nextBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"> Selanjutnya <i class="fas fa-chevron-right ml-1"></i> </button>
+     </div>
+    </div>
+   </div>
+  </div><!-- Game Screen -->
+  <div id="gameScreen" class="hidden min-h-full bg-gradient-to-br from-purple-50 to-pink-100">
+   <div class="max-w-6xl mx-auto py-6 px-4">
+    <div class="flex justify-between items-center mb-6">
+     <h2 class="text-2xl font-bold text-gray-900">Drag &amp; Drop Game</h2>
+     <div class="flex items-center space-x-4">
+      <div class="bg-green-100 text-green-800 px-3 py-1 rounded-lg font-medium">
+       Skor: <span id="gameScore">0</span>
+      </div><button onclick="resetGame()" class="bg-gray-500 text-white px-3 py-1 rounded-lg hover:bg-gray-600"> Reset </button> <button onclick="backToDashboard()" class="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600"> Kembali </button>
+     </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><!-- Items to Drag -->
+     <div class="bg-white rounded-lg shadow-lg p-6">
+      <h3 class="text-lg font-semibold mb-4">Item yang Tersedia</h3>
+      <div id="gameItems" class="grid grid-cols-2 gap-4"><!-- Game items will be populated here -->
+      </div>
+     </div><!-- Drop Zones -->
+     <div class="bg-white rounded-lg shadow-lg p-6">
+      <h3 class="text-lg font-semibold mb-4">Area Pencocokan</h3>
+      <div id="dropZones" class="space-y-4"><!-- Drop zones will be populated here -->
+      </div>
+     </div>
+    </div>
+   </div>
+  </div><!-- Leaderboard Screen -->
+  <div id="leaderboardScreen" class="hidden min-h-full bg-white">
+   <div class="max-w-6xl mx-auto py-6 px-4">
+    <div class="flex justify-between items-center mb-6">
+     <h2 class="text-2xl font-bold text-gray-900">Leaderboard</h2><button onclick="backToDashboard()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"> Kembali </button>
+    </div>
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+     <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+       <thead class="bg-gray-50">
+        <tr>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peringkat</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NISN</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skor</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
+        </tr>
+       </thead>
+       <tbody id="leaderboardBody" class="bg-white divide-y divide-gray-200"><!-- Leaderboard data will be populated here -->
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+  </div><!-- My Scores Screen -->
+  <div id="myScoresScreen" class="hidden min-h-full bg-white">
+   <div class="max-w-6xl mx-auto py-6 px-4">
+    <div class="flex justify-between items-center mb-6">
+     <h2 class="text-2xl font-bold text-gray-900">Skor Saya</h2><button onclick="backToDashboard()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"> Kembali </button>
+    </div>
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+     <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+       <thead class="bg-gray-50">
+        <tr>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skor</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
+        </tr>
+       </thead>
+       <tbody id="myScoresBody" class="bg-white divide-y divide-gray-200"><!-- My scores data will be populated here -->
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+        // Global variables
+        let currentUser = null;
+        let currentStudentData = null;
+        let quizData = [];
+        let gameItems = [];
+        let currentQuestionIndex = 0;
+        let quizTimer = null;
+        let timeLeft = 600; // 10 minutes
+        let currentScore = 0;
+        let userAnswers = [];
+        let allData = [];
+        let currentQuizSessionId = null;
+
+        // Configuration
+        const defaultConfig = {
+            school_name: "SMPN 10 BANAWA SELATAN",
+            welcome_message: "Selamat datang di sistem pembelajaran interaktif",
+            quiz_title: "Quiz Interaktif",
+            game_title: "Drag & Drop Game"
+        };
+
+        // Data handler with enhanced debugging
+        const dataHandler = {
+            onDataChanged(data) {
+                allData = data;
+                console.log('📊 DATA UPDATED:', data.length, 'total records');
+                
+                // Debug: Show recent quiz data
+                const quizRecords = data.filter(item => item.kategori && item.kategori.startsWith('Quiz_'));
+                console.log('📝 Quiz records found:', quizRecords.length);
+                
+                if (quizRecords.length > 0) {
+                    console.log('📝 Recent quiz records:', quizRecords.slice(-5));
+                }
+                
+                // Debug: Show data by user
+                if (currentUser) {
+                    const userData = data.filter(item => item.username === currentUser.username);
+                    console.log(`👤 Records for ${currentUser.username}:`, userData.length);
+                }
+                
+                // Update UI indicators
+                updateDataIndicators(data);
+            }
+        };
+        
+        // Update data indicators in UI
+        function updateDataIndicators(data) {
+            const indicators = document.querySelectorAll('.data-indicator');
+            indicators.forEach(indicator => {
+                indicator.textContent = `${data.length} records tersimpan`;
+            });
+        }
+
+        // Debug functions
+        function showDebugPanel() {
+            const panel = document.getElementById('debugPanel');
+            const info = document.getElementById('debugInfo');
+            
+            const quizRecords = allData.filter(item => item.kategori && item.kategori.startsWith('Quiz_'));
+            const userRecords = currentUser ? allData.filter(item => item.username === currentUser.username) : [];
+            
+            info.innerHTML = `
+                <div>📊 Total Records: ${allData.length}</div>
+                <div>📝 Quiz Records: ${quizRecords.length}</div>
+                <div>👤 Current User: ${currentUser ? currentUser.username : 'None'}</div>
+                <div>🎓 Student Data: ${currentStudentData ? 'Available' : 'Missing'}</div>
+                <div>👤 User Records: ${userRecords.length}</div>
+                <div>🔧 Data SDK: ${window.dataSdk ? 'Available' : 'Missing'}</div>
+                <div>🔧 Element SDK: ${window.elementSdk ? 'Available' : 'Missing'}</div>
+                <div class="mt-2">
+                    <button onclick="testSaveFunction()" class="text-xs bg-green-500 px-2 py-1 rounded mr-1">Test Save</button>
+                    <button onclick="console.table(allData)" class="text-xs bg-blue-500 px-2 py-1 rounded">Show Data</button>
+                </div>
+            `;
+            
+            panel.classList.remove('hidden');
+        }
+        
+        function toggleDebugPanel() {
+            document.getElementById('debugPanel').classList.add('hidden');
+        }
+        
+        // Test save function
+        async function testSaveFunction() {
+            if (!currentUser || currentUser.role !== 'siswa' || !currentStudentData) {
+                alert('❌ Cannot test save - missing user data');
+                return;
+            }
+            
+            try {
+                console.log('🧪 Testing Data SDK save...');
+                
+                const testData = {
+                    username: currentUser.username,
+                    nama_siswa: currentStudentData.nama_siswa,
+                    nisn: currentStudentData.nisn,
+                    kelas: currentStudentData.kelas,
+                    score: 1,
+                    waktu: 999,
+                    timestamp: new Date().toISOString(),
+                    kategori: 'Test_Save',
+                    role: 'siswa'
+                };
+                
+                console.log('🧪 Test data:', testData);
+                showSaveIndicator('🧪 Testing save...', 'loading');
+                
+                const result = await window.dataSdk.create(testData);
+                
+                if (result.isOk) {
+                    console.log('✅ Test save successful!');
+                    showSaveIndicator('✅ Test save berhasil!', 'success');
+                    
+                    // Wait and verify data appears in allData
+                    setTimeout(async () => {
+                        const found = allData.find(item => 
+                            item.Username === testData.Username && 
+                            item.Kategori === testData.Kategori &&
+                            item.Timestamp === testData.Timestamp
+                        );
+                        
+                        if (found) {
+                            console.log('✅ VERIFIED: Test data found in system:', found);
+                            alert(`✅ Test save berhasil dan terverifikasi!\n\nData tersimpan:\n- Username: ${found.Username}\n- Kategori: ${found.Kategori}\n- Score: ${found.Score}\n- Timestamp: ${found.Timestamp}\n\n📊 Link Google Sheets:\nhttps://docs.google.com/spreadsheets/d/1JuGtaU9Iu9YfFDmkCakgzlSTwllBX-2kfksTw5yOz3M/edit?gid=292273439`);
+                        } else {
+                            console.log('⚠️ Test data not yet visible in allData');
+                            alert('✅ Test save berhasil!\n\n⚠️ Data mungkin butuh waktu untuk muncul di sistem.\n\n📊 Cek Google Sheets:\nhttps://docs.google.com/spreadsheets/d/1JuGtaU9Iu9YfFDmkCakgzlSTwllBX-2kfksTw5yOz3M/edit?gid=292273439');
+                        }
+                    }, 3000);
+                    
+                } else {
+                    console.error('❌ Test save failed:', result.error);
+                    showErrorIndicator('❌ Test save gagal');
+                    alert('❌ Test save gagal: ' + result.error);
+                }
+                
+            } catch (error) {
+                console.error('❌ Test save exception:', error);
+                showErrorIndicator('❌ Test save error');
+                alert('❌ Test save error: ' + error.message);
+            }
+        }
+
+        // Initialize SDK
+        async function initializeApp() {
+            try {
+                console.log('🚀 Initializing Data SDK...');
+                const initResult = await window.dataSdk.init(dataHandler);
+                if (!initResult.isOk) {
+                    console.error('❌ Failed to initialize data SDK:', initResult.error);
+                    return;
+                }
+                console.log('✅ Data SDK initialized successfully');
+
+                // Initialize Element SDK
+                if (window.elementSdk) {
+                    console.log('🚀 Initializing Element SDK...');
+                    await window.elementSdk.init({
+                        defaultConfig,
+                        render: async (config) => {
+                            document.getElementById('schoolName').textContent = config.school_name || defaultConfig.school_name;
+                            document.getElementById('welcomeMessage').textContent = config.welcome_message || defaultConfig.welcome_message;
+                            document.getElementById('quizTitle').textContent = config.quiz_title || defaultConfig.quiz_title;
+                            document.getElementById('teacherQuizTitle').textContent = config.quiz_title || defaultConfig.quiz_title;
+                            document.getElementById('gameTitle').textContent = config.game_title || defaultConfig.game_title;
+                        },
+                        mapToCapabilities: (config) => ({
+                            recolorables: [],
+                            borderables: [],
+                            fontEditable: undefined,
+                            fontSizeable: undefined
+                        }),
+                        mapToEditPanelValues: (config) => new Map([
+                            ["school_name", config.school_name || defaultConfig.school_name],
+                            ["welcome_message", config.welcome_message || defaultConfig.welcome_message],
+                            ["quiz_title", config.quiz_title || defaultConfig.quiz_title],
+                            ["game_title", config.game_title || defaultConfig.game_title]
+                        ])
+                    });
+                    console.log('✅ Element SDK initialized successfully');
+                }
+
+                // Load sample data if empty
+                await loadSampleData();
+                console.log('✅ App initialization complete');
+            } catch (error) {
+                console.error('❌ Initialization error:', error);
+            }
+        }
+
+        // Google Sheets configuration
+        const SHEETS_CONFIG = {
+            baseUrl: 'https://docs.google.com/spreadsheets/d/1JuGtaU9Iu9YfFDmkCakgzlSTwllBX-2kfksTw5yOz3M/gviz/tq?tqx=out:json&sheet=',
+            scoresUrl: 'https://docs.google.com/spreadsheets/d/1JuGtaU9Iu9YfFDmkCakgzlSTwllBX-2kfksTw5yOz3M/gviz/tq?tqx=out:json&gid=292273439&sheet=',
+            quizUrl: 'https://docs.google.com/spreadsheets/d/1JuGtaU9Iu9YfFDmkCakgzlSTwllBX-2kfksTw5yOz3M/gviz/tq?tqx=out:csv&gid=1852868250',
+            sheets: {
+                users: 'Users',
+                dataSiswa: 'DataSiswa', 
+                quiz: 'Quiz',
+                gameItems: 'GameItems',
+                scores: 'Scores'
+            }
+        };
+
+        // External data storage
+        let externalData = {
+            users: [],
+            dataSiswa: [],
+            quiz: [],
+            gameItems: [],
+            scores: []
+        };
+
+        // Fetch data from Google Sheets
+        async function fetchSheetData(sheetName, useScoresUrl = false, useQuizUrl = false) {
+            try {
+                let url;
+                if (useQuizUrl) {
+                    url = SHEETS_CONFIG.quizUrl;
+                } else if (useScoresUrl) {
+                    url = `${SHEETS_CONFIG.scoresUrl}${sheetName}`;
+                } else {
+                    url = `${SHEETS_CONFIG.baseUrl}${sheetName}`;
+                }
+                
+                const response = await fetch(url);
+                const text = await response.text();
+                
+                // Parse Google Sheets JSON response
+                const jsonText = text.substring(47).slice(0, -2);
+                const data = JSON.parse(jsonText);
+                
+                if (!data.table || !data.table.rows) {
+                    return [];
+                }
+                
+                const rows = data.table.rows;
+                const headers = data.table.cols.map(col => col.label || '');
+                
+                return rows.map(row => {
+                    const rowData = {};
+                    headers.forEach((header, index) => {
+                        const cellValue = row.c[index] ? row.c[index].v : '';
+                        rowData[header.toLowerCase().replace(/\s+/g, '_')] = cellValue;
+                    });
+                    return rowData;
+                });
+            } catch (error) {
+                console.error(`Error fetching ${sheetName}:`, error);
+                return [];
+            }
+        }
+
+        // Fetch quiz data from CSV format
+        async function fetchQuizDataCSV() {
+            try {
+                console.log('Fetching quiz data from CSV...');
+                const response = await fetch(SHEETS_CONFIG.quizUrl);
+                const csvText = await response.text();
+                
+                console.log('CSV Response:', csvText.substring(0, 500));
+                
+                // Parse CSV
+                const lines = csvText.split('\n');
+                if (lines.length < 2) {
+                    console.log('No data in CSV');
+                    return [];
+                }
+                
+                // Get headers from first line
+                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                console.log('CSV Headers:', headers);
+                
+                const quizData = [];
+                
+                // Process each data row
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+                    
+                    if (values.length >= 6) { // At least Question, A, B, C, D, Answer
+                        const questionData = {
+                            question_id: `q${i}`,
+                            question: values[0] || '',
+                            option_a: values[1] || '',
+                            option_b: values[2] || '',
+                            option_c: values[3] || '',
+                            option_d: values[4] || '',
+                            answer: values[5] || '',
+                            media_image: values[6] || '',
+                            media_video: values[7] || ''
+                        };
+                        
+                        // Only add if question is not empty
+                        if (questionData.question.trim()) {
+                            quizData.push(questionData);
+                        }
+                    }
+                }
+                
+                console.log('Parsed quiz data:', quizData);
+                return quizData;
+                
+            } catch (error) {
+                console.error('Error fetching quiz CSV:', error);
+                return [];
+            }
+        }
+
+        // Load all external data
+        async function loadExternalData() {
+            try {
+                console.log('Loading data from Google Sheets...');
+                
+                // Load quiz data using CSV method
+                const quizDataCSV = await fetchQuizDataCSV();
+                
+                // Load other sheets
+                const [users, dataSiswa, gameItems, scores] = await Promise.all([
+                    fetchSheetData(SHEETS_CONFIG.sheets.users),
+                    fetchSheetData(SHEETS_CONFIG.sheets.dataSiswa),
+                    fetchSheetData(SHEETS_CONFIG.sheets.gameItems),
+                    fetchSheetData(SHEETS_CONFIG.sheets.scores, true)
+                ]);
+                
+                externalData = {
+                    users: users.map(user => ({
+                        username: user.username || '',
+                        password: user.password || '',
+                        role: user.role || ''
+                    })),
+                    dataSiswa: dataSiswa.map(student => ({
+                        username: student.username || '',
+                        nama_siswa: student.nama_siswa || '',
+                        nisn: student.nisn || '',
+                        kelas: student.kelas || ''
+                    })),
+                    quiz: quizDataCSV, // Use CSV data directly
+                    gameItems: gameItems.map((item, index) => ({
+                        game_item_id: `item${index + 1}`,
+                        item_name: item.item || '',
+                        image_url: item.image || '',
+                        target_area: item.target_area || ''
+                    })),
+                    scores: scores.map(score => ({
+                        username: score.username || '',
+                        nama_siswa: score.nama_siswa || '',
+                        nisn: score.nisn || '',
+                        kelas: score.kelas || '',
+                        score: parseInt(score.score) || 0,
+                        waktu: parseInt(score.waktu) || 0,
+                        timestamp: score.timestamp || '',
+                        kategori: score.kategori || '',
+                        role: score.role || ''
+                    }))
+                };
+                
+                console.log('External data loaded:', externalData);
+                console.log('Quiz data from sheet:', externalData.quiz);
+                return true;
+            } catch (error) {
+                console.error('Error loading external data:', error);
+                return false;
+            }
+        }
+
+        // Load sample data (fallback)
+        async function loadSampleData() {
+            // Try to load external data first
+            const externalLoaded = await loadExternalData();
+            
+            if (!externalLoaded && allData.length === 0) {
+                console.log('Loading fallback sample data...');
+                
+                // Fallback sample data
+                const sampleUsers = [
+                    { username: "siswa1", password: "123", role: "siswa" },
+                    { username: "guru1", password: "123", role: "guru" }
+                ];
+
+                const sampleStudents = [
+                    { username: "siswa1", nama_siswa: "Ahmad Rizki", nisn: "1234567890", kelas: "XII IPA 1" }
+                ];
+
+                const sampleQuiz = [
+                    {
+                        question_id: "q1",
+                        question: "Apa ibu kota Indonesia?",
+                        option_a: "Jakarta",
+                        option_b: "Surabaya", 
+                        option_c: "Bandung",
+                        option_d: "Medan",
+                        answer: "A",
+                        media_image: "",
+                        media_video: ""
+                    }
+                ];
+
+                const sampleGameItems = [
+                    { game_item_id: "item1", item_name: "Apel", image_url: "🍎", target_area: "Buah" }
+                ];
+
+                // Create sample data
+                for (const user of sampleUsers) {
+                    await window.dataSdk.create(user);
+                }
+                for (const student of sampleStudents) {
+                    await window.dataSdk.create(student);
+                }
+                for (const quiz of sampleQuiz) {
+                    await window.dataSdk.create(quiz);
+                }
+                for (const item of sampleGameItems) {
+                    await window.dataSdk.create(item);
+                }
+            }
+        }
+
+        // Login functionality
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const loginBtnText = document.getElementById('loginBtnText');
+            const loginSpinner = document.getElementById('loginSpinner');
+            const loginError = document.getElementById('loginError');
+
+            // Show loading
+            loginBtnText.textContent = 'Memproses...';
+            loginSpinner.classList.remove('hidden');
+            loginBtn.disabled = true;
+            loginError.classList.add('hidden');
+
+            try {
+                // Refresh external data before login
+                await loadExternalData();
+                
+                // Find user in external data first, then fallback to local data
+                let user = externalData.users.find(u => 
+                    u.username === username && 
+                    u.password === password && 
+                    (u.role === 'siswa' || u.role === 'guru')
+                );
+                
+                // Fallback to local data if not found in external data
+                if (!user) {
+                    user = allData.find(item => 
+                        item.username === username && 
+                        item.password === password && 
+                        (item.role === 'siswa' || item.role === 'guru')
+                    );
+                }
+
+                if (user) {
+                    currentUser = user;
+                    console.log('✅ User logged in:', currentUser);
+                    
+                    if (user.role === 'siswa') {
+                        // Find student data in external data first
+                        currentStudentData = externalData.dataSiswa.find(s => s.username === username);
+                        
+                        // Fallback to local data
+                        if (!currentStudentData) {
+                            currentStudentData = allData.find(item => 
+                                item.username === username && item.nama_siswa
+                            );
+                        }
+                        
+                        console.log('✅ Student data loaded:', currentStudentData);
+                        showStudentDashboard();
+                    } else {
+                        showTeacherDashboard();
+                    }
+                } else {
+                    loginError.textContent = 'Username atau password salah!';
+                    loginError.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                loginError.textContent = 'Terjadi kesalahan saat login! Periksa koneksi internet.';
+                loginError.classList.remove('hidden');
+            } finally {
+                // Reset button
+                loginBtnText.textContent = 'Masuk';
+                loginSpinner.classList.add('hidden');
+                loginBtn.disabled = false;
+            }
+        });
+
+        // Show student dashboard
+        function showStudentDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('studentDashboard').classList.remove('hidden');
+            
+            if (currentStudentData) {
+                document.getElementById('studentInfo').textContent = 
+                    `${currentStudentData.nama_siswa} - ${currentStudentData.kelas}`;
+            }
+        }
+
+        // Show teacher dashboard
+        function showTeacherDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('teacherDashboard').classList.remove('hidden');
+            
+            document.getElementById('teacherInfo').textContent = `Guru: ${currentUser.username}`;
+        }
+
+        // Start quiz
+        async function startQuiz() {
+            console.log('Starting quiz...');
+            
+            // Show loading message
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loadingMessage';
+            loadingDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            loadingDiv.innerHTML = `
+                <div class="bg-white p-6 rounded-lg text-center">
+                    <i class="fas fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
+                    <p>Memuat soal quiz dari Google Sheets...</p>
+                </div>
+            `;
+            document.body.appendChild(loadingDiv);
+            
+            try {
+                // Refresh external data
+                await loadExternalData();
+                
+                // Load quiz data from external source first, then fallback to local
+                quizData = externalData.quiz.length > 0 ? externalData.quiz : allData.filter(item => item.question_id);
+                
+                console.log('Quiz data loaded:', quizData);
+                console.log('Number of questions:', quizData.length);
+                
+                if (quizData.length === 0) {
+                    alert('Tidak ada soal quiz yang tersedia! Pastikan Google Sheets dapat diakses dan berisi data.');
+                    return;
+                }
+
+                currentQuestionIndex = 0;
+                currentScore = 0;
+                userAnswers = [];
+                timeLeft = 600; // 10 minutes
+                currentQuizSessionId = `${currentUser.username}_${Date.now()}`;
+
+                document.getElementById('studentDashboard').classList.add('hidden');
+                document.getElementById('quizScreen').classList.remove('hidden');
+                
+                document.getElementById('totalQuestions').textContent = quizData.length;
+                
+                loadQuestion();
+                startTimer();
+                
+            } catch (error) {
+                console.error('Error starting quiz:', error);
+                alert('Terjadi kesalahan saat memuat quiz. Periksa koneksi internet dan coba lagi.');
+            } finally {
+                // Remove loading message
+                const loading = document.getElementById('loadingMessage');
+                if (loading) {
+                    loading.remove();
+                }
+            }
+        }
+
+        // Start quiz as teacher
+        async function startQuizAsTeacher() {
+            console.log('Starting quiz as teacher...');
+            
+            // Show loading message
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loadingMessage';
+            loadingDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            loadingDiv.innerHTML = `
+                <div class="bg-white p-6 rounded-lg text-center">
+                    <i class="fas fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
+                    <p>Memuat soal quiz dari Google Sheets...</p>
+                </div>
+            `;
+            document.body.appendChild(loadingDiv);
+            
+            try {
+                // Refresh external data
+                await loadExternalData();
+                
+                // Load quiz data from external source first, then fallback to local
+                quizData = externalData.quiz.length > 0 ? externalData.quiz : allData.filter(item => item.question_id);
+                
+                console.log('Quiz data loaded for teacher:', quizData);
+                console.log('Number of questions:', quizData.length);
+                
+                if (quizData.length === 0) {
+                    alert('Tidak ada soal quiz yang tersedia! Pastikan Google Sheets dapat diakses dan berisi data.');
+                    return;
+                }
+
+                currentQuestionIndex = 0;
+                currentScore = 0;
+                userAnswers = [];
+                timeLeft = 600; // 10 minutes
+                currentQuizSessionId = `${currentUser.username}_${Date.now()}`;
+
+                document.getElementById('teacherDashboard').classList.add('hidden');
+                document.getElementById('quizScreen').classList.remove('hidden');
+                
+                document.getElementById('totalQuestions').textContent = quizData.length;
+                
+                loadQuestion();
+                startTimer();
+                
+            } catch (error) {
+                console.error('Error starting quiz as teacher:', error);
+                alert('Terjadi kesalahan saat memuat quiz. Periksa koneksi internet dan coba lagi.');
+            } finally {
+                // Remove loading message
+                const loading = document.getElementById('loadingMessage');
+                if (loading) {
+                    loading.remove();
+                }
+            }
+        }
+
+        // YouTube URL helper function
+        function getYouTubeVideoId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        // Google Drive image URL converter
+        function convertGoogleDriveUrl(url) {
+            // Convert Google Drive sharing URL to direct image URL
+            const driveRegex = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
+            const match = url.match(driveRegex);
+            if (match) {
+                return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+            }
+            return url;
+        }
+
+        // Enhanced media type detection
+        function detectMediaType(url) {
+            if (!url || url.trim() === '') return null;
+            
+            // Clean URL
+            url = url.trim();
+            
+            // Check for YouTube
+            if (getYouTubeVideoId(url)) {
+                return 'youtube';
+            }
+            
+            // Check for video extensions
+            const videoExtensions = ['.mp4', '.webm', '.ogg', '.avi', '.mov', '.wmv', '.flv', '.mkv'];
+            if (videoExtensions.some(ext => url.toLowerCase().includes(ext))) {
+                return 'video';
+            }
+            
+            // Check for image extensions or Google Drive
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+            const isGoogleDrive = url.includes('drive.google.com');
+            if (imageExtensions.some(ext => url.toLowerCase().includes(ext)) || isGoogleDrive) {
+                return 'image';
+            }
+            
+            // Default to image for any http/https URL
+            if (url.startsWith('http')) {
+                return 'image';
+            }
+            
+            return null;
+        }
+
+        // Load question
+        function loadQuestion() {
+            if (currentQuestionIndex >= quizData.length) {
+                finishQuiz();
+                return;
+            }
+
+            const question = quizData[currentQuestionIndex];
+            
+            document.getElementById('questionNumber').textContent = currentQuestionIndex + 1;
+            document.getElementById('questionText').textContent = question.question;
+            
+            // Handle media with enhanced detection
+            const mediaContainer = document.getElementById('questionMedia');
+            const questionImage = document.getElementById('questionImage');
+            const questionVideo = document.getElementById('questionVideo');
+            
+            // Reset media display
+            mediaContainer.classList.add('hidden');
+            questionImage.classList.add('hidden');
+            questionVideo.classList.add('hidden');
+            questionImage.src = '';
+            questionVideo.src = '';
+            
+            // Remove any existing YouTube iframes
+            const existingYouTubes = mediaContainer.querySelectorAll('.youtube-player');
+            existingYouTubes.forEach(iframe => iframe.remove());
+            
+            // Track media display state
+            let hasAnyMedia = false;
+            let mediaCount = 0;
+            
+            console.log('🎬 Processing media for question:', currentQuestionIndex + 1);
+            console.log('🎬 Media Image URL:', question.media_image);
+            console.log('🎬 Media Video URL:', question.media_video);
+            
+            // Process media_image (column 7)
+            if (question.media_image && question.media_image.trim() !== '') {
+                const mediaType = detectMediaType(question.media_image);
+                console.log('🎬 Media Image Type:', mediaType);
+                
+                if (mediaType === 'youtube') {
+                    const youtubeId = getYouTubeVideoId(question.media_image);
+                    if (youtubeId) {
+                        mediaContainer.classList.remove('hidden');
+                        const youtubeIframe = document.createElement('iframe');
+                        youtubeIframe.className = `youtube-player w-full h-64 rounded-lg mx-auto ${mediaCount > 0 ? 'mt-4' : 'mb-4'}`;
+                        youtubeIframe.src = `https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`;
+                        youtubeIframe.frameBorder = '0';
+                        youtubeIframe.allowFullscreen = true;
+                        youtubeIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                        mediaContainer.appendChild(youtubeIframe);
+                        hasAnyMedia = true;
+                        mediaCount++;
+                        console.log('✅ YouTube video added from media_image');
+                    }
+                } else if (mediaType === 'image') {
+                    // Convert Google Drive URL if needed
+                    const imageUrl = convertGoogleDriveUrl(question.media_image);
+                    
+                    mediaContainer.classList.remove('hidden');
+                    questionImage.src = imageUrl;
+                    questionImage.classList.remove('hidden');
+                    questionImage.alt = `Media gambar untuk pertanyaan ${currentQuestionIndex + 1}`;
+                    questionImage.className = `max-w-full h-64 object-cover rounded-lg mx-auto ${mediaCount > 0 ? 'mt-4' : 'mb-4'}`;
+                    
+                    questionImage.onload = function() {
+                        console.log('✅ Image loaded successfully:', this.src);
+                    };
+                    
+                    questionImage.onerror = function() {
+                        console.log('❌ Failed to load image:', this.src);
+                        this.style.display = 'none';
+                        checkMediaContainerVisibility();
+                    };
+                    
+                    hasAnyMedia = true;
+                    mediaCount++;
+                    console.log('✅ Image added from media_image:', imageUrl);
+                } else if (mediaType === 'video') {
+                    mediaContainer.classList.remove('hidden');
+                    questionVideo.src = question.media_image;
+                    questionVideo.classList.remove('hidden');
+                    questionVideo.className = `max-w-full h-64 rounded-lg mx-auto ${mediaCount > 0 ? 'mt-4' : 'mb-4'}`;
+                    
+                    questionVideo.onloadeddata = function() {
+                        console.log('✅ Video loaded successfully:', this.src);
+                    };
+                    
+                    questionVideo.onerror = function() {
+                        console.log('❌ Failed to load video:', this.src);
+                        this.style.display = 'none';
+                        checkMediaContainerVisibility();
+                    };
+                    
+                    hasAnyMedia = true;
+                    mediaCount++;
+                    console.log('✅ Video added from media_image');
+                }
+            }
+            
+            // Process media_video (column 8)
+            if (question.media_video && question.media_video.trim() !== '') {
+                const mediaType = detectMediaType(question.media_video);
+                console.log('🎬 Media Video Type:', mediaType);
+                
+                if (mediaType === 'youtube') {
+                    const youtubeId = getYouTubeVideoId(question.media_video);
+                    if (youtubeId) {
+                        mediaContainer.classList.remove('hidden');
+                        const youtubeIframe = document.createElement('iframe');
+                        youtubeIframe.className = `youtube-player w-full h-64 rounded-lg mx-auto ${mediaCount > 0 ? 'mt-4' : 'mb-4'}`;
+                        youtubeIframe.src = `https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`;
+                        youtubeIframe.frameBorder = '0';
+                        youtubeIframe.allowFullscreen = true;
+                        youtubeIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                        mediaContainer.appendChild(youtubeIframe);
+                        hasAnyMedia = true;
+                        mediaCount++;
+                        console.log('✅ YouTube video added from media_video');
+                    }
+                } else if (mediaType === 'image') {
+                    // Convert Google Drive URL if needed
+                    const imageUrl = convertGoogleDriveUrl(question.media_video);
+                    
+                    // Create second image element if first is already used
+                    let imageElement = questionImage;
+                    if (!questionImage.classList.contains('hidden')) {
+                        imageElement = document.createElement('img');
+                        imageElement.className = `max-w-full h-64 object-cover rounded-lg mx-auto ${mediaCount > 0 ? 'mt-4' : 'mb-4'}`;
+                        mediaContainer.appendChild(imageElement);
+                    } else {
+                        questionImage.classList.remove('hidden');
+                        questionImage.className = `max-w-full h-64 object-cover rounded-lg mx-auto ${mediaCount > 0 ? 'mt-4' : 'mb-4'}`;
+                    }
+                    
+                    mediaContainer.classList.remove('hidden');
+                    imageElement.src = imageUrl;
+                    imageElement.alt = `Media gambar kedua untuk pertanyaan ${currentQuestionIndex + 1}`;
+                    
+                    imageElement.onload = function() {
+                        console.log('✅ Second image loaded successfully:', this.src);
+                    };
+                    
+                    imageElement.onerror = function() {
+                        console.log('❌ Failed to load second image:', this.src);
+                        this.style.display = 'none';
+                        checkMediaContainerVisibility();
+                    };
+                    
+                    hasAnyMedia = true;
+                    mediaCount++;
+                    console.log('✅ Second image added from media_video:', imageUrl);
+                } else if (mediaType === 'video') {
+                    // Create second video element if first is already used
+                    let videoElement = questionVideo;
+                    if (!questionVideo.classList.contains('hidden')) {
+                        videoElement = document.createElement('video');
+                        videoElement.className = `max-w-full h-64 rounded-lg mx-auto ${mediaCount > 0 ? 'mt-4' : 'mb-4'}`;
+                        videoElement.controls = true;
+                        mediaContainer.appendChild(videoElement);
+                    } else {
+                        questionVideo.classList.remove('hidden');
+                        questionVideo.className = `max-w-full h-64 rounded-lg mx-auto ${mediaCount > 0 ? 'mt-4' : 'mb-4'}`;
+                    }
+                    
+                    mediaContainer.classList.remove('hidden');
+                    videoElement.src = question.media_video;
+                    
+                    videoElement.onloadeddata = function() {
+                        console.log('✅ Second video loaded successfully:', this.src);
+                    };
+                    
+                    videoElement.onerror = function() {
+                        console.log('❌ Failed to load second video:', this.src);
+                        this.style.display = 'none';
+                        checkMediaContainerVisibility();
+                    };
+                    
+                    hasAnyMedia = true;
+                    mediaCount++;
+                    console.log('✅ Second video added from media_video');
+                }
+            }
+            
+            // Function to check if media container should be visible
+            function checkMediaContainerVisibility() {
+                const visibleMedia = mediaContainer.querySelectorAll('img:not([style*="display: none"]), video:not([style*="display: none"]), .youtube-player');
+                if (visibleMedia.length === 0) {
+                    mediaContainer.classList.add('hidden');
+                    console.log('🔍 All media failed to load, hiding container');
+                } else {
+                    console.log('🔍 Media container remains visible, found:', visibleMedia.length, 'working media elements');
+                }
+            }
+            
+            // Final check - hide container if no media was processed
+            if (!hasAnyMedia) {
+                mediaContainer.classList.add('hidden');
+                console.log('🔍 No media URLs found, hiding container');
+            } else {
+                console.log('🎬 Media processing complete:', mediaCount, 'media elements added');
+            }
+
+            // Load options
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            const options = [
+                { key: 'A', text: question.option_a },
+                { key: 'B', text: question.option_b },
+                { key: 'C', text: question.option_c },
+                { key: 'D', text: question.option_d }
+            ];
+
+            options.forEach(option => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'quiz-option p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50';
+                optionDiv.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3 font-semibold">
+                            ${option.key}
+                        </div>
+                        <span>${option.text}</span>
+                    </div>
+                `;
+                
+                optionDiv.addEventListener('click', () => selectOption(option.key, optionDiv));
+                optionsContainer.appendChild(optionDiv);
+            });
+
+            // Restore previous selection if exists
+            if (userAnswers[currentQuestionIndex]) {
+                const selectedOption = document.querySelector(`[data-option="${userAnswers[currentQuestionIndex]}"]`);
+                if (selectedOption) {
+                    selectOption(userAnswers[currentQuestionIndex], selectedOption);
+                }
+            }
+
+            // Update navigation buttons
+            document.getElementById('prevBtn').disabled = currentQuestionIndex === 0;
+            document.getElementById('nextBtn').textContent = 
+                currentQuestionIndex === quizData.length - 1 ? 'Selesai' : 'Selanjutnya';
+        }
+
+        // Select option
+        function selectOption(key, element) {
+            console.log('🎯 Option selected:', key, 'for question', currentQuestionIndex + 1);
+            
+            // Remove previous selection
+            document.querySelectorAll('.quiz-option').forEach(opt => {
+                opt.classList.remove('border-blue-500', 'bg-blue-50');
+                opt.classList.add('border-gray-200');
+            });
+            
+            // Add selection
+            element.classList.remove('border-gray-200');
+            element.classList.add('border-blue-500', 'bg-blue-50');
+            
+            // Store answer
+            userAnswers[currentQuestionIndex] = key;
+            console.log('📝 Answer stored:', userAnswers);
+            
+            // Auto-save answer untuk siswa - format sesuai kolom sheet Scores
+            if (currentUser && currentUser.role === 'siswa' && currentStudentData) {
+                console.log('💾 Triggering auto-save for student...');
+                saveAnswerToScoresSheet(currentQuestionIndex, key);
+            } else {
+                console.log('⚠️ Auto-save skipped:', {
+                    hasUser: !!currentUser,
+                    userRole: currentUser?.role,
+                    hasStudentData: !!currentStudentData
+                });
+            }
+        }
+
+        // Save individual answer to Scores sheet with correct format
+        async function saveAnswerToScoresSheet(questionIndex, selectedAnswer) {
+            console.log('🔄 saveAnswerToScoresSheet called:', { questionIndex, selectedAnswer });
+            console.log('🔄 Current user:', currentUser);
+            console.log('🔄 Current student data:', currentStudentData);
+            
+            if (!currentUser || currentUser.role !== 'siswa' || !currentStudentData) {
+                console.log('❌ Skipping save - validation failed');
+                console.log('❌ User role:', currentUser?.role);
+                console.log('❌ Has student data:', !!currentStudentData);
+                return;
+            }
+
+            try {
+                const question = quizData[questionIndex];
+                const isCorrect = selectedAnswer === question.answer;
+                
+                // Show loading indicator
+                showSaveIndicator(`💾 Menyimpan Q${questionIndex + 1}...`, 'loading');
+                
+                // Format data sesuai dengan kolom sheet Scores
+                const answerData = {
+                    username: currentUser.username || '',
+                    nama_siswa: currentStudentData.nama_siswa || '',
+                    nisn: currentStudentData.nisn || '',
+                    kelas: currentStudentData.kelas || '',
+                    score: isCorrect ? 1 : 0,
+                    waktu: questionIndex + 1,
+                    timestamp: new Date().toISOString(),
+                    kategori: `Quiz_Q${questionIndex + 1}`,
+                    role: "siswa"
+                };
+                
+                console.log('📊 Prepared answer data:', answerData);
+                console.log('🔧 Data SDK available:', !!window.dataSdk);
+                
+                if (!window.dataSdk) {
+                    console.error('❌ Data SDK not available!');
+                    showErrorIndicator('❌ Sistem penyimpanan tidak tersedia');
+                    return;
+                }
+                
+                // Simpan dengan retry mechanism yang kuat
+                let retryCount = 0;
+                const maxRetries = 5;
+                let result;
+                let lastError;
+                
+                while (retryCount < maxRetries) {
+                    try {
+                        console.log(`🔄 Save attempt ${retryCount + 1}/${maxRetries}`);
+                        
+                        result = await window.dataSdk.create(answerData);
+                        
+                        console.log(`📊 Save result attempt ${retryCount + 1}:`, result);
+                        
+                        if (result && result.isOk) {
+                            console.log(`✅ SUCCESS on attempt ${retryCount + 1}!`);
+                            break;
+                        } else {
+                            lastError = result ? result.error : 'Unknown error';
+                            console.error(`❌ Failed attempt ${retryCount + 1}:`, lastError);
+                        }
+                    } catch (error) {
+                        lastError = error;
+                        console.error(`❌ Exception on attempt ${retryCount + 1}:`, error);
+                    }
+                    
+                    retryCount++;
+                    if (retryCount < maxRetries) {
+                        const delay = 1000 + (retryCount * 500); // Progressive delay
+                        console.log(`⏳ Waiting ${delay}ms before retry...`);
+                        showSaveIndicator(`🔄 Mencoba lagi (${retryCount + 1}/${maxRetries})...`, 'loading');
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+                
+                if (result && result.isOk) {
+                    console.log(`✅ FINAL SUCCESS: Q${questionIndex + 1} saved successfully`);
+                    showSaveIndicator(`✅ Q${questionIndex + 1} tersimpan ke Google Sheets!`, 'success');
+                    
+                    // Verify save after delay
+                    setTimeout(() => {
+                        const found = allData.find(item => 
+                            item.username === answerData.username && 
+                            item.kategori === answerData.kategori
+                        );
+                        if (found) {
+                            console.log('✅ VERIFIED: Data found in allData:', found);
+                        } else {
+                            console.log('⚠️ Data not yet visible in allData (may take time)');
+                        }
+                    }, 3000);
+                    
+                } else {
+                    console.error('❌ FINAL FAILURE after all retries');
+                    console.error('❌ Last error:', lastError);
+                    showErrorIndicator(`❌ Gagal menyimpan Q${questionIndex + 1}`);
+                    
+                    // Show detailed error
+                    setTimeout(() => {
+                        alert(`Gagal menyimpan jawaban Q${questionIndex + 1}\n\nError: ${lastError}\n\nSilakan lanjutkan quiz, data akan dicoba disimpan ulang.`);
+                    }, 2000);
+                }
+                
+            } catch (error) {
+                console.error('❌ CRITICAL ERROR:', error);
+                showErrorIndicator(`❌ Error: ${error.message}`);
+            }
+        }
+
+        // Show save indicator
+        function showSaveIndicator(message = 'Jawaban tersimpan', type = 'success') {
+            // Hapus indikator sebelumnya jika ada
+            const existingIndicator = document.getElementById('saveIndicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+            
+            // Tentukan warna dan ikon berdasarkan tipe
+            let bgColor, icon;
+            switch (type) {
+                case 'loading':
+                    bgColor = 'bg-blue-500';
+                    icon = 'fas fa-spinner fa-spin';
+                    break;
+                case 'success':
+                    bgColor = 'bg-green-500';
+                    icon = 'fas fa-check-circle';
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-500';
+                    icon = 'fas fa-exclamation-triangle';
+                    break;
+                default:
+                    bgColor = 'bg-green-500';
+                    icon = 'fas fa-check-circle';
+            }
+            
+            // Buat indikator baru
+            const indicator = document.createElement('div');
+            indicator.id = 'saveIndicator';
+            indicator.className = `save-indicator fixed top-4 right-4 ${bgColor} text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center max-w-sm`;
+            indicator.innerHTML = `
+                <i class="${icon} mr-2"></i>
+                <span class="text-sm">${message}</span>
+            `;
+            
+            document.body.appendChild(indicator);
+            
+            // Hapus setelah 3 detik (kecuali loading)
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    if (indicator.parentNode) {
+                        indicator.remove();
+                    }
+                }, 3000);
+            }
+        }
+
+        // Show error indicator
+        function showErrorIndicator(message = 'Terjadi kesalahan') {
+            showSaveIndicator(message, 'error');
+        }
+
+        // Navigation functions
+        function previousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                loadQuestion();
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < quizData.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        // Timer functions
+        function startTimer() {
+            quizTimer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 0) {
+                    finishQuiz();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const display = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            document.getElementById('timeLeft').textContent = display;
+            
+            // Add warning class when time is low
+            const timerDisplay = document.getElementById('timerDisplay');
+            if (timeLeft <= 60) {
+                timerDisplay.classList.add('timer-warning');
+            }
+        }
+
+        // Finish quiz
+        async function finishQuiz() {
+            clearInterval(quizTimer);
+            
+            // Calculate score
+            let correctAnswers = 0;
+            let detailedAnswers = [];
+            
+            quizData.forEach((question, index) => {
+                const userAnswer = userAnswers[index] || 'Tidak dijawab';
+                const isCorrect = userAnswer === question.answer;
+                
+                if (isCorrect) {
+                    correctAnswers++;
+                }
+                
+                detailedAnswers.push({
+                    question_number: index + 1,
+                    question: question.question,
+                    user_answer: userAnswer,
+                    correct_answer: question.answer,
+                    is_correct: isCorrect
+                });
+            });
+            
+            currentScore = Math.round((correctAnswers / quizData.length) * 100);
+            const timeTaken = 600 - timeLeft;
+            
+            // Save final score only for students - format sesuai kolom sheet Scores
+            if (currentUser && currentUser.role === 'siswa' && currentStudentData) {
+                // Show loading saat menyimpan hasil final
+                const saveMessage = document.createElement('div');
+                saveMessage.id = 'finalSaveMessage';
+                saveMessage.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                saveMessage.innerHTML = `
+                    <div class="bg-white p-6 rounded-lg text-center">
+                        <i class="fas fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
+                        <p>Menyimpan hasil quiz final ke Google Sheets...</p>
+                        <p class="text-sm text-gray-500 mt-2">Mohon tunggu, jangan tutup halaman</p>
+                    </div>
+                `;
+                document.body.appendChild(saveMessage);
+                
+                try {
+                    // Format data sesuai dengan kolom sheet Scores: Username, Nama Siswa, NISN, Kelas, Score, Waktu, Timestamp, Kategori, Role
+                    const finalScoreData = {
+                        username: currentUser.username || '',
+                        nama_siswa: currentStudentData.nama_siswa || '',
+                        nisn: currentStudentData.nisn || '',
+                        kelas: currentStudentData.kelas || '',
+                        score: currentScore,
+                        waktu: timeTaken,
+                        timestamp: new Date().toISOString(),
+                        kategori: "Quiz_Final",
+                        role: "siswa"
+                    };
+                    
+                    console.log('Saving final score data:', finalScoreData);
+                    
+                    // Simpan skor final ke Data SDK dengan retry mechanism
+                    let retryCount = 0;
+                    const maxRetries = 5;
+                    let result;
+                    
+                    while (retryCount < maxRetries) {
+                        try {
+                            result = await window.dataSdk.create(finalScoreData);
+                            if (result.isOk) {
+                                break;
+                            }
+                            console.error(`Final score save attempt ${retryCount + 1} failed:`, result.error);
+                        } catch (error) {
+                            console.error(`Final score save retry ${retryCount + 1} failed:`, error);
+                        }
+                        retryCount++;
+                        if (retryCount < maxRetries) {
+                            // Update loading message
+                            const loadingText = saveMessage.querySelector('p');
+                            loadingText.textContent = `Menyimpan hasil quiz final... (Percobaan ${retryCount + 1}/${maxRetries})`;
+                            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+                        }
+                    }
+                    
+                    if (result && result.isOk) {
+                        console.log('✅ Final score saved successfully to Scores sheet');
+                        // Update message to success
+                        saveMessage.innerHTML = `
+                            <div class="bg-white p-6 rounded-lg text-center">
+                                <i class="fas fa-check-circle text-2xl text-green-600 mb-2"></i>
+                                <p class="text-green-600 font-semibold">Hasil quiz berhasil tersimpan!</p>
+                                <p class="text-sm text-gray-500 mt-2">Data telah disimpan ke Google Sheets</p>
+                            </div>
+                        `;
+                        setTimeout(() => {
+                            if (saveMessage.parentNode) {
+                                saveMessage.remove();
+                            }
+                        }, 2000);
+                    } else {
+                        console.error('❌ Error saving final score after all retries:', result ? result.error : 'Unknown error');
+                        // Update message to error
+                        saveMessage.innerHTML = `
+                            <div class="bg-white p-6 rounded-lg text-center">
+                                <i class="fas fa-exclamation-triangle text-2xl text-red-600 mb-2"></i>
+                                <p class="text-red-600 font-semibold">Gagal menyimpan hasil final</p>
+                                <p class="text-sm text-gray-500 mt-2">Periksa koneksi internet dan coba lagi</p>
+                                <button onclick="this.parentElement.parentElement.parentElement.remove()" class="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Tutup</button>
+                            </div>
+                        `;
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Error saving quiz results:', error);
+                    // Update message to error
+                    saveMessage.innerHTML = `
+                        <div class="bg-white p-6 rounded-lg text-center">
+                            <i class="fas fa-exclamation-triangle text-2xl text-red-600 mb-2"></i>
+                            <p class="text-red-600 font-semibold">Terjadi kesalahan saat menyimpan</p>
+                            <p class="text-sm text-gray-500 mt-2">Error: ${error.message}</p>
+                            <button onclick="this.parentElement.parentElement.parentElement.remove()" class="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Tutup</button>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Show detailed result
+            const resultMessage = currentUser.role === 'guru' ? 
+                `Quiz selesai!\n\nHasil:\n✅ Benar: ${correctAnswers}/${quizData.length}\n📊 Skor: ${currentScore}%\n⏱️ Waktu: ${Math.floor(timeTaken/60)}:${(timeTaken%60).toString().padStart(2,'0')}\n\n(Skor guru tidak disimpan)` :
+                `🎉 Quiz selesai!\n\nHasil Anda:\n✅ Jawaban Benar: ${correctAnswers}/${quizData.length}\n📊 Skor Akhir: ${currentScore}%\n⏱️ Waktu Pengerjaan: ${Math.floor(timeTaken/60)}:${(timeTaken%60).toString().padStart(2,'0')}\n\n✨ Semua jawaban dan hasil telah tersimpan otomatis ke Google Sheets!\n📊 Link: https://docs.google.com/spreadsheets/d/1JuGtaU9Iu9YfFDmkCakgzlSTwllBX-2kfksTw5yOz3M/edit?gid=292273439`;
+            
+            alert(resultMessage);
+            
+            backToDashboard();
+        }
+
+        // Show leaderboard
+        async function showLeaderboard() {
+            document.getElementById('teacherDashboard').classList.add('hidden');
+            document.getElementById('leaderboardScreen').classList.remove('hidden');
+            
+            // Refresh external data
+            await loadExternalData();
+            
+            // Get all scores from external data first, then fallback to local
+            let scores = externalData.scores.filter(score => score.kategori === 'Quiz_Final' || score.Kategori === 'Quiz_Final');
+            
+            // Fallback to local data if no external scores
+            if (scores.length === 0) {
+                scores = allData.filter(item => 
+                    (item.score !== undefined || item.Score !== undefined) && 
+                    (item.kategori === 'Quiz_Final' || item.Kategori === 'Quiz_Final')
+                );
+            }
+            
+            // Sort by score descending
+            scores.sort((a, b) => b.score - a.score);
+            
+            const tbody = document.getElementById('leaderboardBody');
+            tbody.innerHTML = '';
+            
+            if (scores.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                        Belum ada data skor yang tersedia
+                    </td>
+                `;
+                tbody.appendChild(row);
+                return;
+            }
+            
+            scores.forEach((score, index) => {
+                const row = document.createElement('tr');
+                row.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                
+                const rankClass = index === 0 ? 'text-yellow-600 font-bold' : 
+                                 index === 1 ? 'text-gray-500 font-bold' : 
+                                 index === 2 ? 'text-orange-600 font-bold' : '';
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${rankClass}">
+                        ${index + 1}
+                        ${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : ''}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${score.nama_siswa || score['Nama Siswa'] || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${score.nisn || score.NISN || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${score.kelas || score.Kelas || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">${score.score || score.Score}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${Math.floor((score.waktu || score.Waktu)/60)}:${((score.waktu || score.Waktu)%60).toString().padStart(2,'0')}
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // Show my scores
+        async function showMyScores() {
+            document.getElementById('studentDashboard').classList.add('hidden');
+            document.getElementById('myScoresScreen').classList.remove('hidden');
+            
+            // Show loading message
+            const tbody = document.getElementById('myScoresBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-6 py-4 text-center text-gray-500">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>
+                        Memuat data skor dari Google Sheets...
+                    </td>
+                </tr>
+            `;
+            
+            try {
+                // Refresh external data to get latest scores from Scores sheet
+                await loadExternalData();
+                
+                console.log('🔍 Debug - Current user:', currentUser);
+                console.log('🔍 Debug - All data length:', allData.length);
+                console.log('🔍 Debug - External scores length:', externalData.scores.length);
+                
+                // Get user's scores from BOTH external and local data with flexible matching
+                let myScores = [];
+                
+                // Check external data first
+                const externalUserScores = externalData.scores.filter(score => {
+                    const usernameMatch = (score.username === currentUser.username || 
+                                         score.Username === currentUser.username);
+                    const hasScore = (score.score !== undefined || score.Score !== undefined);
+                    const hasCategory = (score.kategori || score.Kategori);
+                    
+                    console.log('🔍 External score check:', {
+                        score: score,
+                        usernameMatch,
+                        hasScore,
+                        hasCategory
+                    });
+                    
+                    return usernameMatch && hasScore && hasCategory;
+                });
+                
+                // Check local data
+                const localUserScores = allData.filter(item => {
+                    const usernameMatch = (item.username === currentUser.username || 
+                                         item.Username === currentUser.username);
+                    const hasScore = (item.score !== undefined || item.Score !== undefined);
+                    const hasCategory = (item.kategori || item.Kategori);
+                    
+                    console.log('🔍 Local score check:', {
+                        item: item,
+                        usernameMatch,
+                        hasScore,
+                        hasCategory
+                    });
+                    
+                    return usernameMatch && hasScore && hasCategory;
+                });
+                
+                // Combine both sources
+                myScores = [...externalUserScores, ...localUserScores];
+                
+                console.log('🔍 Debug - Found scores:', myScores);
+                
+                // Remove duplicates based on timestamp and category
+                const uniqueScores = [];
+                const seen = new Set();
+                
+                myScores.forEach(score => {
+                    const key = `${score.timestamp || score.Timestamp}_${score.kategori || score.Kategori}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        uniqueScores.push(score);
+                    }
+                });
+                
+                myScores = uniqueScores;
+                
+                // Sort by timestamp descending (newest first)
+                myScores.sort((a, b) => {
+                    const dateA = new Date(a.timestamp || a.Timestamp || 0);
+                    const dateB = new Date(b.timestamp || b.Timestamp || 0);
+                    return dateB - dateA;
+                });
+                
+                tbody.innerHTML = '';
+                
+                if (myScores.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">
+                            <div class="space-y-2">
+                                <div><i class="fas fa-info-circle mr-2"></i>Belum ada riwayat quiz ditemukan</div>
+                                <div class="text-xs">
+                                    <div>👤 User: ${currentUser.username}</div>
+                                    <div>📊 Total data: ${allData.length}</div>
+                                    <div>📈 External scores: ${externalData.scores.length}</div>
+                                </div>
+                                <div class="mt-3">
+                                    <button onclick="testSaveFunction()" class="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
+                                        Test Save Function
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                    return;
+                }
+                
+                myScores.forEach((score, index) => {
+                    const row = document.createElement('tr');
+                    row.className = index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100';
+                    
+                    const timestamp = score.timestamp || score.Timestamp;
+                    const date = timestamp ? new Date(timestamp) : new Date();
+                    const formattedDate = date.toLocaleDateString('id-ID', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    const kategori = score.kategori || score.Kategori || 'Unknown';
+                    const scoreValue = score.score || score.Score || 0;
+                    const waktuValue = score.waktu || score.Waktu || 0;
+                    
+                    // Add score badge based on performance for final scores
+                    let scoreBadge = '';
+                    if (kategori === 'Quiz_Final') {
+                        if (scoreValue >= 90) {
+                            scoreBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2">Excellent</span>';
+                        } else if (scoreValue >= 80) {
+                            scoreBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">Good</span>';
+                        } else if (scoreValue >= 70) {
+                            scoreBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">Fair</span>';
+                        } else {
+                            scoreBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">Needs Improvement</span>';
+                        }
+                    }
+                    
+                    // Format kategori display
+                    let kategoriDisplay = kategori;
+                    if (kategori === 'Quiz_Final') {
+                        kategoriDisplay = '🏆 Quiz Final';
+                    } else if (kategori?.startsWith('Quiz_Q')) {
+                        kategoriDisplay = '📝 ' + kategori.replace('Quiz_Q', 'Soal ');
+                    } else if (kategori === 'Test_Save') {
+                        kategoriDisplay = '🧪 Test Save';
+                    }
+                    
+                    // Format score display
+                    let scoreDisplay = '';
+                    if (kategori === 'Quiz_Final') {
+                        scoreDisplay = `${scoreValue}%`;
+                    } else if (kategori === 'Test_Save') {
+                        scoreDisplay = '✅ Test';
+                    } else {
+                        scoreDisplay = scoreValue === 1 ? '✅ Benar' : '❌ Salah';
+                    }
+                    
+                    // Format waktu display
+                    let waktuDisplay = '';
+                    if (kategori === 'Quiz_Final') {
+                        waktuDisplay = `<i class="fas fa-clock mr-1"></i>${Math.floor(waktuValue/60)}:${(waktuValue%60).toString().padStart(2,'0')}`;
+                    } else if (kategori === 'Test_Save') {
+                        waktuDisplay = '🧪 Test';
+                    } else {
+                        waktuDisplay = `Soal ${waktuValue}`;
+                    }
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formattedDate}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${kategoriDisplay}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold ${kategori === 'Quiz_Final' ? 'text-green-600' : scoreValue === 1 ? 'text-green-600' : 'text-red-600'}">
+                            ${scoreDisplay}
+                            ${scoreBadge}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${waktuDisplay}
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+                
+                console.log(`✅ Loaded ${myScores.length} scores for user ${currentUser.username}`);
+                
+            } catch (error) {
+                console.error('❌ Error loading my scores:', error);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-red-500">
+                            <div class="space-y-2">
+                                <div><i class="fas fa-exclamation-triangle mr-2"></i>Gagal memuat data skor</div>
+                                <div class="text-xs text-gray-500">Error: ${error.message}</div>
+                                <div class="mt-3">
+                                    <button onclick="showMyScores()" class="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 mr-2">
+                                        Coba Lagi
+                                    </button>
+                                    <button onclick="testSaveFunction()" class="text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
+                                        Test Save
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Start game
+        async function startGame() {
+            // Refresh external data
+            await loadExternalData();
+            
+            // Load game items from external source first, then fallback to local
+            gameItems = externalData.gameItems.length > 0 ? externalData.gameItems : allData.filter(item => item.game_item_id);
+            
+            if (gameItems.length === 0) {
+                alert('Tidak ada item game yang tersedia!');
+                return;
+            }
+
+            document.getElementById('teacherDashboard').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            
+            setupGame();
+        }
+
+        // Setup game
+        function setupGame() {
+            const gameItemsContainer = document.getElementById('gameItems');
+            const dropZonesContainer = document.getElementById('dropZones');
+            
+            gameItemsContainer.innerHTML = '';
+            dropZonesContainer.innerHTML = '';
+            
+            // Get unique target areas
+            const targetAreas = [...new Set(gameItems.map(item => item.target_area))];
+            
+            // Create drag items
+            gameItems.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'drag-item bg-white p-4 rounded-lg shadow-md text-center cursor-grab';
+                itemDiv.draggable = true;
+                itemDiv.dataset.itemId = item.game_item_id;
+                itemDiv.dataset.targetArea = item.target_area;
+                
+                // Check if image_url is an emoji or URL
+                const isEmoji = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(item.image_url);
+                
+                if (isEmoji || !item.image_url.startsWith('http')) {
+                    // Display as emoji or text
+                    itemDiv.innerHTML = `
+                        <div class="text-4xl mb-2">${item.image_url}</div>
+                        <div class="text-sm text-gray-600">${item.item_name || item.game_item_id}</div>
+                    `;
+                } else {
+                    // Display as image
+                    itemDiv.innerHTML = `
+                        <img src="${item.image_url}" alt="${item.item_name}" class="w-16 h-16 mx-auto mb-2 object-cover rounded" 
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div class="text-4xl mb-2 hidden">📷</div>
+                        <div class="text-sm text-gray-600">${item.item_name || item.game_item_id}</div>
+                    `;
+                }
+                
+                itemDiv.addEventListener('dragstart', handleDragStart);
+                gameItemsContainer.appendChild(itemDiv);
+            });
+            
+            // Create drop zones
+            targetAreas.forEach(area => {
+                const zoneDiv = document.createElement('div');
+                zoneDiv.className = 'drop-zone bg-gray-50 rounded-lg p-4 text-center';
+                zoneDiv.dataset.targetArea = area;
+                
+                zoneDiv.innerHTML = `
+                    <h4 class="font-semibold text-gray-700 mb-2">${area}</h4>
+                    <div class="dropped-items space-y-2"></div>
+                `;
+                
+                zoneDiv.addEventListener('dragover', handleDragOver);
+                zoneDiv.addEventListener('drop', handleDrop);
+                dropZonesContainer.appendChild(zoneDiv);
+            });
+        }
+
+        // Drag and drop handlers
+        let draggedItem = null;
+
+        function handleDragStart(e) {
+            draggedItem = e.target;
+            e.target.style.opacity = '0.5';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            if (draggedItem) {
+                const dropZone = e.currentTarget;
+                const targetArea = dropZone.dataset.targetArea;
+                const itemTargetArea = draggedItem.dataset.targetArea;
+                
+                if (targetArea === itemTargetArea) {
+                    // Correct match
+                    const droppedItems = dropZone.querySelector('.dropped-items');
+                    const clonedItem = draggedItem.cloneNode(true);
+                    clonedItem.className = 'bg-green-100 p-2 rounded text-center';
+                    clonedItem.draggable = false;
+                    
+                    droppedItems.appendChild(clonedItem);
+                    draggedItem.remove();
+                    
+                    // Update score
+                    updateGameScore(10);
+                    
+                    // Check if game is complete
+                    if (document.querySelectorAll('.drag-item').length === 0) {
+                        setTimeout(() => {
+                            alert('Selamat! Anda telah menyelesaikan game!');
+                        }, 500);
+                    }
+                } else {
+                    // Wrong match
+                    draggedItem.style.opacity = '1';
+                    updateGameScore(-5);
+                }
+                
+                draggedItem = null;
+            }
+        }
+
+        // Update game score
+        function updateGameScore(points) {
+            const currentGameScore = parseInt(document.getElementById('gameScore').textContent);
+            const newScore = Math.max(0, currentGameScore + points);
+            
+            document.getElementById('gameScore').textContent = newScore;
+            document.getElementById('gameScore').classList.add('score-animation');
+            
+            setTimeout(() => {
+                document.getElementById('gameScore').classList.remove('score-animation');
+            }, 500);
+        }
+
+        // Reset game
+        function resetGame() {
+            document.getElementById('gameScore').textContent = '0';
+            setupGame();
+        }
+
+        // Back to dashboard
+        function backToDashboard() {
+            // Hide all screens
+            document.getElementById('quizScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('leaderboardScreen').classList.add('hidden');
+            document.getElementById('myScoresScreen').classList.add('hidden');
+            
+            // Show appropriate dashboard
+            if (currentUser.role === 'siswa') {
+                document.getElementById('studentDashboard').classList.remove('hidden');
+            } else {
+                document.getElementById('teacherDashboard').classList.remove('hidden');
+            }
+        }
+
+        // Logout
+        function logout() {
+            currentUser = null;
+            currentStudentData = null;
+            currentQuizSessionId = null;
+            
+            // Clear form
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            
+            // Hide all screens and show login
+            document.getElementById('studentDashboard').classList.add('hidden');
+            document.getElementById('teacherDashboard').classList.add('hidden');
+            document.getElementById('quizScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('leaderboardScreen').classList.add('hidden');
+            document.getElementById('myScoresScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        // Initialize app when page loads
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9913a992c256fd2c',t:'MTc2MDkxMjQyMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
