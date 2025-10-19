@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Drag & Drop</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<style>
+  .dropzone{border:2px dashed #ccc;padding:10px;text-align:center;min-height:100px;}
+  .draggable{width:80px;cursor:pointer;margin:5px;}
+</style>
+</head>
+<body class="p-4 bg-gray-100">
+<h2 class="text-xl font-bold mb-2">Game Drag & Drop</h2>
+<div id="gameArea" class="grid grid-cols-2 gap-4"></div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMu-EqAQekJXP2OSGy4ThkVeTAXkfcdjxh3_xfXhLb56SXSi3EqHr0ESA7RKm6p7NV/exec";
+async function loadGame(){
+  const res = await axios.post(SCRIPT_URL, { action:'getGameItems' });
+  const gameArea = document.getElementById('gameArea');
+  res.data.forEach(item=>{
+    const img = document.createElement('img');
+    img.src = item.gambar;
+    img.draggable = true;
+    img.className='draggable';
+    img.dataset.target = item.target;
+    img.addEventListener('dragstart', e=> e.dataTransfer.setData('text', e.target.dataset.target));
+    gameArea.appendChild(img);
+
+    const dz = document.createElement('div');
+    dz.className='dropzone';
+    dz.innerText=item.target;
+    dz.addEventListener('dragover', e=> e.preventDefault());
+    dz.addEventListener('drop', e=>{
+      const data = e.dataTransfer.getData('text');
+      if(data===item.target) alert('Cocok!');
+      else alert('Salah!');
+    });
+    gameArea.appendChild(dz);
+  });
+}
+loadGame();
+</script>
+</body>
+</html>
