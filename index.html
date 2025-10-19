@@ -89,44 +89,44 @@
   </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0Xlt4n_cJLrohBahX_Vjsv3CJ-KeX7Rj4T3K1DlI4SK8WTKQKChIYiWaMIGBXAEKd/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0Xlt4n_cJLrohBahX_Vjsv3CJ-KeX7Rj4T3K1DlI4SK8WTKQKChIYiWaMIGBXAEKd/exec";
 
-document.getElementById('loginBtn').addEventListener('click', async ()=>{
-  const username = document.getElementById('username').value.trim();
-  const password = document.getElementById('password').value.trim();
-  const msg = document.getElementById('msg');
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const msg = document.getElementById('msg');
 
-  if (!username || !password) {
-    msg.textContent = '⚠️ Harap isi username dan password!';
-    msg.className = 'text-danger mt-3 fw-semibold';
-    return;
-  }
+    if (!username || !password) {
+      msg.textContent = '⚠️ Harap isi username dan password!';
+      msg.className = 'text-danger mt-3 fw-semibold';
+      return;
+    }
 
-  msg.textContent = '⏳ Memproses login...';
-  msg.className = 'text-secondary mt-3 fw-semibold';
+    msg.textContent = '⏳ Memproses login...';
+    msg.className = 'text-secondary mt-3 fw-semibold';
 
-  try {
-    const res = await axios.post(SCRIPT_URL, { action:'login', username, password });
-    if(res.data.success){
-      localStorage.setItem('user', JSON.stringify(res.data));
-      msg.textContent = '✅ Login berhasil! Mengalihkan...';
-      msg.className = 'text-success mt-3 fw-semibold';
-      setTimeout(()=>{
-        if(res.data.role==='guru'){
-          window.location.href='game.html';
-        }else{
-          window.location.href='quiz.html';
-        }
-      }, 1200);
-    } else {
-      msg.textContent = res.data.message;
+    try {
+      const res = await axios.post(SCRIPT_URL, { action: 'login', username, password });
+      if (res.data.success) {
+        localStorage.setItem('user', JSON.stringify(res.data));
+        msg.textContent = '✅ Login berhasil! Mengalihkan...';
+        msg.className = 'text-success mt-3 fw-semibold';
+        setTimeout(() => {
+          if (res.data.role === 'guru') {
+            window.location.href = 'game.html';
+          } else {
+            window.location.href = 'quiz.html';
+          }
+        }, 1200);
+      } else {
+        msg.textContent = res.data.message;
+        msg.className = 'text-danger mt-3 fw-semibold';
+      }
+    } catch (err) {
+      msg.textContent = '❌ Gagal koneksi ke server!';
       msg.className = 'text-danger mt-3 fw-semibold';
     }
-  } catch (err) {
-    msg.textContent = '❌ Gagal koneksi ke server!';
-    msg.className = 'text-danger mt-3 fw-semibold';
-  }
-});
+  });
 </script>
 </body>
 </html>
