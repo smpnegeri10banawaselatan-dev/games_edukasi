@@ -76,10 +76,31 @@
                 opacity: 1;
             }
         }
+
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 300px;
+        }
     </style>
   <style>@view-transition { navigation: auto; }</style>
  </head>
- <body class="h-full bg-gradient-to-br from-blue-50 to-indigo-100"><!-- Login Screen -->
+ <body class="h-full bg-gradient-to-br from-blue-50 to-indigo-100"><!-- Debug Panel -->
+  <div id="debugPanel" class="debug-panel hidden">
+   <div class="font-bold mb-2">
+    🔍 Debug Status
+   </div>
+   <div id="debugInfo">
+    Loading...
+   </div><button onclick="toggleDebugPanel()" class="mt-2 text-xs bg-red-500 px-2 py-1 rounded">Close</button>
+  </div><!-- Login Screen -->
   <div id="loginScreen" class="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
    <div class="max-w-md w-full space-y-8">
     <div class="text-center">
@@ -107,8 +128,10 @@
        <div class="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center mr-3"><i class="fas fa-graduation-cap text-white text-sm"></i>
        </div>
        <h1 class="text-xl font-semibold text-gray-900">Dashboard Siswa</h1>
-       <div class="ml-4 flex items-center text-xs text-green-600">
-        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div><span>Data Tersimpan ke Google Sheets</span>
+       <div class="ml-4 flex items-center space-x-3">
+        <div class="flex items-center text-xs text-green-600">
+         <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div><span class="data-indicator">Data Tersimpan ke Google Sheets</span>
+        </div><button onclick="showDebugPanel()" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"> Debug Status </button>
        </div>
       </div>
       <div class="flex items-center space-x-4"><span id="studentInfo" class="text-sm text-gray-600"></span> <button onclick="logout()" class="text-gray-500 hover:text-gray-700"> <i class="fas fa-sign-out-alt"></i> </button>
@@ -163,8 +186,10 @@
        <div class="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center mr-3"><i class="fas fa-graduation-cap text-white text-sm"></i>
        </div>
        <h1 class="text-xl font-semibold text-gray-900">Dashboard Guru</h1>
-       <div class="ml-4 flex items-center text-xs text-green-600">
-        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div><span>Data Tersimpan ke Google Sheets</span>
+       <div class="ml-4 flex items-center space-x-3">
+        <div class="flex items-center text-xs text-green-600">
+         <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div><span class="data-indicator">Data Tersimpan ke Google Sheets</span>
+        </div><button onclick="showDebugPanel()" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"> Debug Status </button>
        </div>
       </div>
       <div class="flex items-center space-x-4"><span id="teacherInfo" class="text-sm text-gray-600"></span> <button onclick="logout()" class="text-gray-500 hover:text-gray-700"> <i class="fas fa-sign-out-alt"></i> </button>
@@ -236,7 +261,7 @@
       </div>
       <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg font-medium">
        Skor: <span id="currentScore">0</span>
-      </div>
+      </div><button onclick="showDebugPanel()" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"> Debug </button>
      </div>
     </div><!-- Quiz Content -->
     <div id="quizContent" class="bg-white rounded-lg shadow-lg p-6">
@@ -347,13 +372,111 @@
             game_title: "Drag & Drop Game"
         };
 
-        // Data handler
+        // Data handler with enhanced debugging
         const dataHandler = {
             onDataChanged(data) {
                 allData = data;
-                console.log('Data updated:', data.length, 'records');
+                console.log('📊 DATA UPDATED:', data.length, 'total records');
+                
+                // Debug: Show recent quiz data
+                const quizRecords = data.filter(item => item.kategori && item.kategori.startsWith('Quiz_'));
+                console.log('📝 Quiz records found:', quizRecords.length);
+                
+                if (quizRecords.length > 0) {
+                    console.log('📝 Recent quiz records:', quizRecords.slice(-5));
+                }
+                
+                // Debug: Show data by user
+                if (currentUser) {
+                    const userData = data.filter(item => item.username === currentUser.username);
+                    console.log(`👤 Records for ${currentUser.username}:`, userData.length);
+                }
+                
+                // Update UI indicators
+                updateDataIndicators(data);
             }
         };
+        
+        // Update data indicators in UI
+        function updateDataIndicators(data) {
+            const indicators = document.querySelectorAll('.data-indicator');
+            indicators.forEach(indicator => {
+                indicator.textContent = `${data.length} records tersimpan`;
+            });
+        }
+
+        // Debug functions
+        function showDebugPanel() {
+            const panel = document.getElementById('debugPanel');
+            const info = document.getElementById('debugInfo');
+            
+            const quizRecords = allData.filter(item => item.kategori && item.kategori.startsWith('Quiz_'));
+            const userRecords = currentUser ? allData.filter(item => item.username === currentUser.username) : [];
+            
+            info.innerHTML = `
+                <div>📊 Total Records: ${allData.length}</div>
+                <div>📝 Quiz Records: ${quizRecords.length}</div>
+                <div>👤 Current User: ${currentUser ? currentUser.username : 'None'}</div>
+                <div>🎓 Student Data: ${currentStudentData ? 'Available' : 'Missing'}</div>
+                <div>👤 User Records: ${userRecords.length}</div>
+                <div>🔧 Data SDK: ${window.dataSdk ? 'Available' : 'Missing'}</div>
+                <div>🔧 Element SDK: ${window.elementSdk ? 'Available' : 'Missing'}</div>
+                <div class="mt-2">
+                    <button onclick="testSaveFunction()" class="text-xs bg-green-500 px-2 py-1 rounded mr-1">Test Save</button>
+                    <button onclick="console.table(allData)" class="text-xs bg-blue-500 px-2 py-1 rounded">Show Data</button>
+                </div>
+            `;
+            
+            panel.classList.remove('hidden');
+        }
+        
+        function toggleDebugPanel() {
+            document.getElementById('debugPanel').classList.add('hidden');
+        }
+        
+        // Test save function
+        async function testSaveFunction() {
+            if (!currentUser || currentUser.role !== 'siswa' || !currentStudentData) {
+                alert('❌ Cannot test save - missing user data');
+                return;
+            }
+            
+            try {
+                console.log('🧪 Testing Data SDK save...');
+                
+                const testData = {
+                    username: currentUser.username,
+                    nama_siswa: currentStudentData.nama_siswa,
+                    nisn: currentStudentData.nisn,
+                    kelas: currentStudentData.kelas,
+                    score: 1,
+                    waktu: 999,
+                    timestamp: new Date().toISOString(),
+                    kategori: 'Test_Save',
+                    role: 'siswa'
+                };
+                
+                console.log('🧪 Test data:', testData);
+                showSaveIndicator('🧪 Testing save...', 'loading');
+                
+                const result = await window.dataSdk.create(testData);
+                
+                if (result.isOk) {
+                    console.log('✅ Test save successful!');
+                    showSaveIndicator('✅ Test save berhasil!', 'success');
+                    alert('✅ Test save berhasil! Check console for details.');
+                } else {
+                    console.error('❌ Test save failed:', result.error);
+                    showErrorIndicator('❌ Test save gagal');
+                    alert('❌ Test save gagal: ' + result.error);
+                }
+                
+            } catch (error) {
+                console.error('❌ Test save exception:', error);
+                showErrorIndicator('❌ Test save error');
+                alert('❌ Test save error: ' + error.message);
+            }
+        }
 
         // Initialize SDK
         async function initializeApp() {
@@ -671,6 +794,7 @@
 
                 if (user) {
                     currentUser = user;
+                    console.log('✅ User logged in:', currentUser);
                     
                     if (user.role === 'siswa') {
                         // Find student data in external data first
@@ -683,6 +807,7 @@
                             );
                         }
                         
+                        console.log('✅ Student data loaded:', currentStudentData);
                         showStudentDashboard();
                     } else {
                         showTeacherDashboard();
@@ -944,6 +1069,8 @@
 
         // Select option
         function selectOption(key, element) {
+            console.log('🎯 Option selected:', key, 'for question', currentQuestionIndex + 1);
+            
             // Remove previous selection
             document.querySelectorAll('.quiz-option').forEach(opt => {
                 opt.classList.remove('border-blue-500', 'bg-blue-50');
@@ -956,17 +1083,31 @@
             
             // Store answer
             userAnswers[currentQuestionIndex] = key;
+            console.log('📝 Answer stored:', userAnswers);
             
             // Auto-save answer untuk siswa - format sesuai kolom sheet Scores
-            if (currentUser.role === 'siswa' && currentStudentData) {
+            if (currentUser && currentUser.role === 'siswa' && currentStudentData) {
+                console.log('💾 Triggering auto-save for student...');
                 saveAnswerToScoresSheet(currentQuestionIndex, key);
+            } else {
+                console.log('⚠️ Auto-save skipped:', {
+                    hasUser: !!currentUser,
+                    userRole: currentUser?.role,
+                    hasStudentData: !!currentStudentData
+                });
             }
         }
 
         // Save individual answer to Scores sheet with correct format
         async function saveAnswerToScoresSheet(questionIndex, selectedAnswer) {
+            console.log('🔄 saveAnswerToScoresSheet called:', { questionIndex, selectedAnswer });
+            console.log('🔄 Current user:', currentUser);
+            console.log('🔄 Current student data:', currentStudentData);
+            
             if (!currentUser || currentUser.role !== 'siswa' || !currentStudentData) {
-                console.log('Skipping save - not a student or missing data');
+                console.log('❌ Skipping save - validation failed');
+                console.log('❌ User role:', currentUser?.role);
+                console.log('❌ Has student data:', !!currentStudentData);
                 return;
             }
 
@@ -975,54 +1116,96 @@
                 const isCorrect = selectedAnswer === question.answer;
                 
                 // Show loading indicator
-                showSaveIndicator(`Menyimpan jawaban Q${questionIndex + 1}...`, 'loading');
+                showSaveIndicator(`💾 Menyimpan Q${questionIndex + 1}...`, 'loading');
                 
-                // Format data sesuai dengan kolom sheet Scores: Username, Nama Siswa, NISN, Kelas, Score, Waktu, Timestamp, Kategori, Role
+                // Format data sesuai dengan kolom sheet Scores
                 const answerData = {
                     username: currentUser.username || '',
                     nama_siswa: currentStudentData.nama_siswa || '',
                     nisn: currentStudentData.nisn || '',
                     kelas: currentStudentData.kelas || '',
-                    score: isCorrect ? 1 : 0, // 1 untuk benar, 0 untuk salah
-                    waktu: questionIndex + 1, // nomor soal sebagai penanda
+                    score: isCorrect ? 1 : 0,
+                    waktu: questionIndex + 1,
                     timestamp: new Date().toISOString(),
-                    kategori: `Quiz_Q${questionIndex + 1}`, // Kategori per soal
+                    kategori: `Quiz_Q${questionIndex + 1}`,
                     role: "siswa"
                 };
                 
-                console.log('Saving answer data:', answerData);
+                console.log('📊 Prepared answer data:', answerData);
+                console.log('🔧 Data SDK available:', !!window.dataSdk);
                 
-                // Simpan ke Data SDK dengan retry mechanism
+                if (!window.dataSdk) {
+                    console.error('❌ Data SDK not available!');
+                    showErrorIndicator('❌ Sistem penyimpanan tidak tersedia');
+                    return;
+                }
+                
+                // Simpan dengan retry mechanism yang kuat
                 let retryCount = 0;
-                const maxRetries = 3;
+                const maxRetries = 5;
                 let result;
+                let lastError;
                 
                 while (retryCount < maxRetries) {
                     try {
+                        console.log(`🔄 Save attempt ${retryCount + 1}/${maxRetries}`);
+                        
                         result = await window.dataSdk.create(answerData);
-                        if (result.isOk) {
+                        
+                        console.log(`📊 Save result attempt ${retryCount + 1}:`, result);
+                        
+                        if (result && result.isOk) {
+                            console.log(`✅ SUCCESS on attempt ${retryCount + 1}!`);
                             break;
+                        } else {
+                            lastError = result ? result.error : 'Unknown error';
+                            console.error(`❌ Failed attempt ${retryCount + 1}:`, lastError);
                         }
                     } catch (error) {
-                        console.error(`Retry ${retryCount + 1} failed:`, error);
+                        lastError = error;
+                        console.error(`❌ Exception on attempt ${retryCount + 1}:`, error);
                     }
+                    
                     retryCount++;
                     if (retryCount < maxRetries) {
-                        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+                        const delay = 1000 + (retryCount * 500); // Progressive delay
+                        console.log(`⏳ Waiting ${delay}ms before retry...`);
+                        showSaveIndicator(`🔄 Mencoba lagi (${retryCount + 1}/${maxRetries})...`, 'loading');
+                        await new Promise(resolve => setTimeout(resolve, delay));
                     }
                 }
                 
                 if (result && result.isOk) {
-                    console.log(`✅ Jawaban tersimpan ke sheet Scores: Q${questionIndex + 1} = ${selectedAnswer} (${isCorrect ? 'Benar' : 'Salah'})`);
-                    showSaveIndicator(`✅ Jawaban Q${questionIndex + 1} tersimpan`, 'success');
+                    console.log(`✅ FINAL SUCCESS: Q${questionIndex + 1} saved successfully`);
+                    showSaveIndicator(`✅ Q${questionIndex + 1} tersimpan ke Google Sheets!`, 'success');
+                    
+                    // Verify save after delay
+                    setTimeout(() => {
+                        const found = allData.find(item => 
+                            item.username === answerData.username && 
+                            item.kategori === answerData.kategori
+                        );
+                        if (found) {
+                            console.log('✅ VERIFIED: Data found in allData:', found);
+                        } else {
+                            console.log('⚠️ Data not yet visible in allData (may take time)');
+                        }
+                    }, 3000);
+                    
                 } else {
-                    console.error('❌ Error saving answer after retries:', result ? result.error : 'Unknown error');
+                    console.error('❌ FINAL FAILURE after all retries');
+                    console.error('❌ Last error:', lastError);
                     showErrorIndicator(`❌ Gagal menyimpan Q${questionIndex + 1}`);
+                    
+                    // Show detailed error
+                    setTimeout(() => {
+                        alert(`Gagal menyimpan jawaban Q${questionIndex + 1}\n\nError: ${lastError}\n\nSilakan lanjutkan quiz, data akan dicoba disimpan ulang.`);
+                    }, 2000);
                 }
                 
             } catch (error) {
-                console.error('❌ Error saving answer to Scores sheet:', error);
-                showErrorIndicator(`❌ Gagal menyimpan Q${questionIndex + 1}`);
+                console.error('❌ CRITICAL ERROR:', error);
+                showErrorIndicator(`❌ Error: ${error.message}`);
             }
         }
 
@@ -1077,29 +1260,7 @@
 
         // Show error indicator
         function showErrorIndicator(message = 'Terjadi kesalahan') {
-            // Hapus indikator sebelumnya jika ada
-            const existingIndicator = document.getElementById('errorIndicator');
-            if (existingIndicator) {
-                existingIndicator.remove();
-            }
-            
-            // Buat indikator baru
-            const indicator = document.createElement('div');
-            indicator.id = 'errorIndicator';
-            indicator.className = 'save-indicator fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center max-w-sm';
-            indicator.innerHTML = `
-                <i class="fas fa-exclamation-triangle mr-2"></i>
-                <span class="text-sm">${message}</span>
-            `;
-            
-            document.body.appendChild(indicator);
-            
-            // Hapus setelah 3 detik
-            setTimeout(() => {
-                if (indicator.parentNode) {
-                    indicator.remove();
-                }
-            }, 3000);
+            showSaveIndicator(message, 'error');
         }
 
         // Navigation functions
@@ -1663,5 +1824,5 @@
         // Initialize app when page loads
         document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9910386f6785fe11',t:'MTc2MDg3NjMzMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99104f5e25c3fd3e',t:'MTc2MDg3NzI3MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
